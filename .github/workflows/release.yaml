@@ -1,21 +1,31 @@
 name: release
 
 on:
-  pull_request:
   push:
-    # run only against tags
-    tags:
-      - "*"
+    branches:
+      - main
 
 permissions:
   contents: write
   packages: write
   id-token: write
+  pull-requests: write
 
 jobs:
 
-  goreleaser:
+  release-please:
     runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: go
+
+  go-releaser:
+    runs-on: ubuntu-latest
+    if: ${{ needs.release-please.outputs.release_created == 'true' }}
     steps:
 
       - name: Checkout
@@ -28,6 +38,13 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
@@ -35,9 +52,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload assets
-        uses: actions/upload-artifact@v4
-        with:
-          name: firebolt-mcp-server
-          path: dist/*
