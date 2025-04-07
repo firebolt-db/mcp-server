@@ -77,6 +77,3 @@ docker_manifests:
       - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8
 
 release: {}
-
-npm:
-  - name: "@firebolt-db/mcp-server"
