@@ -1,0 +1,37 @@
+version: 3
+
+tasks:
+
+  help:
+    desc: Display this help screen
+    silent: true
+    cmds:
+      - task --list
+
+  mod:
+    desc: tidy Go modules, download dependencies
+    silent: true
+    cmd: |
+      go mod tidy
+      go mod download
+
+  build:
+    desc: Build application binary
+    silent: true
+    deps:
+      - task: goreleaser
+        vars:
+          CLI_ARGS: build --clean --snapshot --single-target
+
+  goreleaser:
+    desc: Build application binary
+    silent: true
+    cmd: |
+      docker run --rm --privileged \
+        -v $PWD:/src \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -w /src \
+        -e GOOS={{OS}} \
+        -e GOARCH={{ARCH}} \
+        goreleaser/goreleaser:v2.8.2 \
+        {{.CLI_ARGS}}
