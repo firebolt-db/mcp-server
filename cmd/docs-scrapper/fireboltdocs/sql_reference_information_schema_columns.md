@@ -1,0 +1,18 @@
+# [](#information-schema-for-columns)Information schema for columns
+
+You can use the `information_schema.columns` view to return information about all columns in a table in a database. The view is available in each database and contains one row for each column. You can use a `SELECT` query to return information about each column as shown in the example below.
+
+To view column information, the user must have `USAGE` privileges on both the [schema](/Overview/Security/Role-Based%20Access%20Control/database-permissions/schema-permissions.html#schema-level-privileges) and the [database](/Overview/Security/Role-Based%20Access%20Control/database-permissions/#database-level-privileges), as well as any necessary [table-level privileges](/Overview/Security/Role-Based%20Access%20Control/database-permissions/table-permissions.html#table-level-privileges) or ownership of the table.
+
+```
+SELECT
+  *
+FROM
+  information_schema.columns;
+```
+
+## [](#columns-in-information_schemacolumns)Columns in information\_schema.columns
+
+Each row has the following columns with information about each column.
+
+Column Name Data Type Description table\_catalog TEXT Name of the catalog. Firebolt provides a single `default` catalog. table\_schema TEXT Name of the database containing the table. table\_name TEXT Name of the table containing the column. column\_name TEXT Name of the column. is\_nullable TEXT `YES` if the column may contain NULL, `NO` otherwise. data\_type TEXT The data type of the column. is\_in\_partition\_expr TEXT `YES` if the column is included in the table’s `PARTITION BY` clause, `NO` otherwise. is\_in\_primary\_index TEXT `YES` if the column is included in the tables’s `PRIMARY INDEX` clause, `NO` otherwise. character\_maximum\_length NULL Not applicable for Firebolt. character\_octet\_length NULL Not applicable for Firebolt. numeric\_precision\_radix NULL Not applicable for Firebolt. interval\_type NULL Not applicable for Firebolt. interval\_precision NULL Not applicable for Firebolt. character\_set\_catalog NULL Not applicable for Firebolt. character\_set\_schema NULL Not applicable for Firebolt. character\_set\_name NULL Not applicable for Firebolt. collation\_catalog NULL Not applicable for Firebolt. collation\_schema NULL Not applicable for Firebolt. collation\_name NULL Not applicable for Firebolt. domain\_catalog NULL Not applicable for Firebolt. domain\_schema NULL Not applicable for Firebolt. domain\_name NULL Not applicable for Firebolt. udt\_catalog NULL Not applicable for Firebolt. udt\_schema NULL Not applicable for Firebolt. udt\_name NULL Not applicable for Firebolt. scope\_catalog NULL Not applicable for Firebolt. scope\_schema NULL Not applicable for Firebolt. scope\_name NULL Not applicable for Firebolt. maximum\_cardinality NULL Not applicable for Firebolt. dtd\_identifier NULL Not applicable for Firebolt. is\_self\_referencing NULL Not applicable for Firebolt. is\_identity NULL Not applicable for Firebolt. identity\_generation NULL Not applicable for Firebolt. identity\_start NULL Not applicable for Firebolt. identity\_increment NULL Not applicable for Firebolt. identity\_maximum NULL Not applicable for Firebolt. identity\_minimum NULL Not applicable for Firebolt. identity\_cycle NULL Not applicable for Firebolt. is\_generated NULL Not applicable for Firebolt. generation\_expression NULL Not applicable for Firebolt. is\_updatable NULL Not applicable for Firebolt.

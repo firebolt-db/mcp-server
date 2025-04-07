@@ -1,0 +1,26 @@
+## [](#data-definition)Data definition
+
+* * *
+
+- [ALTER ACCOUNT](/sql_reference/commands/data-definition/alter-account.html)
+- [ALTER DATABASE](/sql_reference/commands/data-definition/alter-database.html)
+- [ALTER ORGANIZATION](/sql_reference/commands/data-definition/alter-organization.html)
+- [ALTER SCHEMA](/sql_reference/commands/data-definition/alter-schema.html)
+- [ALTER TABLE](/sql_reference/commands/data-definition/alter-table.html)
+- [ALTER VIEW](/sql_reference/commands/data-definition/alter-view.html)
+- [CREATE ACCOUNT](/sql_reference/commands/data-definition/create-account.html)
+- [CREATE AGGREGATING INDEX](/sql_reference/commands/data-definition/create-aggregating-index.html)
+- [CREATE DATABASE](/sql_reference/commands/data-definition/create-database.html)
+- [CREATE EXTERNAL TABLE](/sql_reference/commands/data-definition/create-external-table.html)
+- [CREATE LOCATION](/sql_reference/commands/data-definition/create-location.html)
+- [CREATE TABLE](/sql_reference/commands/data-definition/create-fact-dimension-table.html)
+- [CREATE TABLE AS SELECT (CTAS)](/sql_reference/commands/data-definition/create-fact-dimension-table-as-select.html)
+- [CREATE TABLE CLONE](/sql_reference/commands/data-definition/create-table-clone.html)
+- [CREATE VIEW](/sql_reference/commands/data-definition/create-view.html)
+- [DROP ACCOUNT](/sql_reference/commands/data-definition/drop-account.html)
+- [DROP DATABASE](/sql_reference/commands/data-definition/drop-database.html)
+- [DROP INDEX](/sql_reference/commands/data-definition/drop-index.html)
+- [DROP LOCATION](/sql_reference/commands/data-definition/drop-location.html)
+- [DROP TABLE](/sql_reference/commands/data-definition/drop-table.html)
+- [DROP VIEW](/sql_reference/commands/data-definition/drop-view.html)
+- [USE DATABASE](/sql_reference/commands/data-definition/use-database.html)
