@@ -46,6 +46,7 @@ func TestNewServer(t *testing.T) {
 	// Create server
 	srv := server.NewServer(
 		logger,
+		"0.0.0",
 		"stdio",
 		"localhost:8080",
 		[]server.Tool{mockTool1},
@@ -66,7 +67,7 @@ func TestNewServer(t *testing.T) {
 func TestServeUnsupportedTransport(t *testing.T) {
 
 	// Create server with unsupported transport
-	srv := server.NewServer(slogt.New(t), "test", "", nil, nil, nil)
+	srv := server.NewServer(slogt.New(t), "0.0.0", "test", "", nil, nil, nil)
 
 	// Call Serve and check error
 	err := srv.Serve(t.Context())

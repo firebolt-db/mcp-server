@@ -23,9 +23,9 @@ import (
 )
 
 var (
-	version string = "0.0.0"
-	commit  string = "unknown"
-	date    string = "unknown"
+	version = "0.0.0"
+	commit  = "unknown"
+	date    = "unknown"
 )
 
 func main() {
@@ -128,6 +128,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	resourceEngines := resources.NewEngines(dbPool)
 	srv := server.NewServer(
 		logger,
+		fullVersion(),
 		cmd.String("transport"),
 		cmd.String("transport-sse-listen-address"),
 		[]server.Tool{

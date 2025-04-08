@@ -13,8 +13,6 @@ import (
 
 	"github.com/mark3labs/mcp-go/mcp"
 	mcpserver "github.com/mark3labs/mcp-go/server"
-
-	"github.com/firebolt-db/mcp-server/pkg/version"
 )
 
 // Server represents the interface for the MCP server functionality.
@@ -66,6 +64,7 @@ type ResourceTemplate interface {
 // Returns a Server that can be used to start handling MCP requests.
 func NewServer(
 	logger *slog.Logger,
+	version string,
 	transport string,
 	transportSSEAddress string,
 	tools []Tool,
@@ -107,7 +106,7 @@ func NewServer(
 	// Initialize the MCP server with Firebolt-specific configuration
 	mcpSrv := mcpserver.NewMCPServer(
 		"Firebolt MCP Server",
-		version.GetFullVersion(),
+		version,
 		mcpserver.WithInstructions(`
 			This MCP makes you a Firebolt cloud data warehouse expert with access to specialized tools and resources.
 			You can assist with SQL queries, data modeling, performance optimization, and analytics for Firebolt.
