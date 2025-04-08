@@ -2,12 +2,12 @@
   <br>
   <a href="https://www.firebolt.io"><img src="https://cdn.prod.website-files.com/5e8a264ceaf4870394477fc7/5e8a264ceaf4879f75477fdd_logo_website.svg" alt="Firebolt" width="300"></a>
   <br>
-  Firebolt MCP Server
+  MCP Server
   <br>
 </h1>
 
 <h4 align="center">
-A Model Context Protocol implementation that connects your LLM to Firebolt's cloud data warehouse
+A Model Context Protocol implementation that connects your LLM to Firebolt Data Warehouse
 </h4>
 
 <p align="center">

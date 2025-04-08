@@ -38,7 +38,7 @@ archives:
 dockers:
   - use: buildx
     image_templates:
-      - "ghcr.io/firebolt-db/mcp-server:{{ .Version }}-amd64"
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-amd64
     build_flag_templates:
       - --platform=linux/amd64
       - --label=org.opencontainers.image.title={{ .ProjectName }}
@@ -51,7 +51,7 @@ dockers:
       - --label=org.opencontainers.image.licenses=MIT
   - use: buildx
     image_templates:
-      - "ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8"
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8
     goarch: arm64
     build_flag_templates:
       - --platform=linux/arm64/v8

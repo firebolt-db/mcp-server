@@ -1,0 +1,32 @@
+version: 2
+updates:
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "12:00"
+    groups:
+      github-actions-deps:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps(github-actions):"
+    reviewers:
+      - kop
+
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "12:00"
+    groups:
+      go-deps:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps(gomod):"
+    reviewers:
+      - kop
