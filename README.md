@@ -61,7 +61,7 @@ docker run \
   --rm \
   -e FIREBOLT_MCP_CLIENT_ID=your-client-id \
   -e FIREBOLT_MCP_CLIENT_SECRET=your-client-secret \
-  ghcr.io/firebolt-db/mcp-server:0.4.1
+  ghcr.io/firebolt-db/mcp-server:0.1.0
 ```
 [//]: # (x-release-please-end)
 
@@ -70,7 +70,7 @@ docker run \
 [//]: # (x-release-please-start-version)
 ```bash
 # Download the binary for your OS from:
-# https://github.com/firebolt-db/mcp-server/releases/tag/v0.4.1
+# https://github.com/firebolt-db/mcp-server/releases/tag/v0.1.0
 
 ./firebolt-mcp-server \
   --client-id your-client-id \
@@ -105,7 +105,7 @@ To integrate with Claude Desktop using **Docker**:
             "--rm",
             "-e", "FIREBOLT_MCP_CLIENT_ID=your-client-id",
             "-e", "FIREBOLT_MCP_CLIENT_SECRET=your-client-secret",
-            "ghcr.io/firebolt-db/mcp-server:0.4.1"
+            "ghcr.io/firebolt-db/mcp-server:0.1.0"
           ]
         }
       }
