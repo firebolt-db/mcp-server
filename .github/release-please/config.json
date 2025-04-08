@@ -17,5 +17,6 @@
   },
   "extra-files": [
     "README.md"
-  ]
+  ],
+  "pull-request-footer": ""
 }
