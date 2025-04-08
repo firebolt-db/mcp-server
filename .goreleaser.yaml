@@ -1,0 +1,79 @@
+version: 2
+project_name: firebolt-mcp-server
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - main: ./cmd/firebolt-mcp-server
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    buildmode: pie
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+    # This name template makes the OS and Arch
+    # compatible with the results of `uname`.
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- title .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # Use zip for windows archives
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+dockers:
+  - use: buildx
+    image_templates:
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-amd64
+    build_flag_templates:
+      - --platform=linux/amd64
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://github.com/firebolt-db/mcp-server
+      - --label=org.opencontainers.image.source=https://github.com/firebolt-db/mcp-server
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses=Apache-2.0
+  - use: buildx
+    image_templates:
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8
+    goarch: arm64
+    build_flag_templates:
+      - --platform=linux/arm64/v8
+      - --label=org.opencontainers.image.title={{ .ProjectName }}
+      - --label=org.opencontainers.image.description={{ .ProjectName }}
+      - --label=org.opencontainers.image.url=https://github.com/firebolt-db/mcp-server
+      - --label=org.opencontainers.image.source=https://github.com/firebolt-db/mcp-server
+      - --label=org.opencontainers.image.version={{ .Version }}
+      - --label=org.opencontainers.image.created={{ time "2006-01-02T15:04:05Z07:00" }}
+      - --label=org.opencontainers.image.revision={{ .FullCommit }}
+      - --label=org.opencontainers.image.licenses=Apache-2.0
+
+docker_manifests:
+  - name_template: ghcr.io/firebolt-db/mcp-server:latest
+    image_templates:
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-amd64
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8
+  - name_template: ghcr.io/firebolt-db/mcp-server:{{ .Version }}
+    image_templates:
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-amd64
+      - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8
+
+release:
+  replace_existing_artifacts: true
+  mode: keep-existing
