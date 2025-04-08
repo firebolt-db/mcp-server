@@ -20,6 +20,7 @@ jobs:
         id: release
         with:
           config-file: .github/release-please/config.json
+          manifest-file: .github/release-please/manifest.json
 
   go-releaser:
     runs-on: ubuntu-latest
