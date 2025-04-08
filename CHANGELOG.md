@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/firebolt-db/mcp-server/compare/v0.4.0...v0.4.1) (2025-04-08)
+
+
+### Bug Fixes
+
+* version management and docker ([4f98220](https://github.com/firebolt-db/mcp-server/commit/4f98220cccce7f49a041c9b22d81998af000c040))
+
 ## [0.4.0](https://github.com/firebolt-db/mcp-server/compare/v0.3.0...v0.4.0) (2025-04-08)
 
 
