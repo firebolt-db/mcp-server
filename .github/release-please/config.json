@@ -14,5 +14,8 @@
   ],
   "packages": {
     ".": {}
-  }
+  },
+  "extra-files": [
+    "README.md"
+  ]
 }

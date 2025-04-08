@@ -11,134 +11,155 @@ A Model Context Protocol implementation that connects your LLM to Firebolt Data 
 </h4>
 
 <p align="center">
-  <a href="https://github.com/firebolt-db/mcp-server/releases">
-    <img src="https://img.shields.io/github/v/release/firebolt-db/mcp-server" alt="Release">
-  </a>
-  <a href="https://github.com/firebolt-db/mcp-server/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/firebolt-db/mcp-server" alt="License">
-  </a>
-  <a href="https://go.dev">
-    <img src="https://img.shields.io/badge/go-1.24.1-blue" alt="Go Version">
-  </a>
-  <a href="https://github.com/firebolt-db/mcp-server/actions/workflows/build.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/firebolt-db/mcp-server/build.yml" alt="Build Status">
-  </a>
-</p>
-
-<p align="center">
   <a href="#key-features">Key Features</a> |
   <a href="#how-to-use">How To Use</a> |
-  <a href="#requirements">Requirements</a> |
+  <a href="#connecting-your-llm">Connecting Your LLM</a> |
   <a href="#architecture">Architecture</a> |
-  <a href="#development">Development</a> |
-  <a href="#license">License</a>
+  <a href="#development">Development</a>
 </p>
-
-![screenshot](https://img.example.firebolt.io/mcp-server-demo.gif)
 
 ## Key Features
 
-* **LLM Integration with Firebolt** - Connect your AI assistants directly to your data warehouse
-  - Enable AI agents to autonomously query your data and build analytics solutions
-  - Provide LLMs with specialized knowledge of Firebolt's capabilities and features
+**LLM Integration with Firebolt**
 
-* **SQL Query Execution** 
-  - Direct query execution against Firebolt databases
-  - Support for multiple query types and execution modes
+- Connect your AI assistants directly to your data warehouse  
+- Enable AI agents to autonomously query data and generate insights  
+- Provide LLMs with deep knowledge of Firebolt SQL, features, and documentation
 
-* **Documentation Access**
-  - Comprehensive Firebolt documentation available to the LLM
-  - SQL reference, function reference, and more
+**SQL Query Execution**
 
-* **Account Management**
-  - Connect to different accounts and engines
-  - Manage authentication seamlessly
+- Support for multiple query types and execution modes  
+- Direct access to Firebolt databases
 
-* **Multi-platform Support**
-  - Run on any platform supporting Go binaries
-  - Docker container support for easy deployment
+**Documentation Access**
+
+- Grant LLMs access to comprehensive Firebolt docs, SQL reference, function lists, and more
+
+**Account Management**
+
+- Seamless authentication with Firebolt service accounts  
+- Connect to different engines and workspaces
+
+**Multi-platform Support**
+
+- Runs anywhere Go binaries are supported  
+- Official Docker image available for easy deployment
 
 ## How To Use
 
-To get started with the Firebolt MCP Server, you'll need a Firebolt service account. If you don't have a Firebolt account yet, [sign up here](https://www.firebolt.io/signup).
+Before you start, ensure you have a Firebolt [service account](https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html) with a client ID and client secret.
 
-### Option 1: Use the Docker image
+### Installing the MCP Server
 
+You can run the Firebolt MCP Server either via Docker or by downloading the binary.
+
+#### Option 1: Run with Docker
+
+[//]: # (x-release-please-start-version)
 ```bash
-# Run with Docker
-docker run -p 8080:8080 \
+docker run \
+  --rm \
   -e FIREBOLT_MCP_CLIENT_ID=your-client-id \
   -e FIREBOLT_MCP_CLIENT_SECRET=your-client-secret \
-  -e FIREBOLT_MCP_TRANSPORT=sse \
-  firebolt/mcp-server:latest
+  ghcr.io/firebolt-db/mcp-server:0.2.0
 ```
+[//]: # (x-release-please-end)
 
-### Option 2: Download and run the binary
+#### Option 2: Run the Binary
 
+[//]: # (x-release-please-start-version)
 ```bash
-# Download the latest release for your platform from:
-# https://github.com/firebolt-db/mcp-server/releases
+# Download the binary for your OS from:
+# https://github.com/firebolt-db/mcp-server/releases/tag/v0.2.0
 
-# Run the server
 ./firebolt-mcp-server \
   --client-id your-client-id \
-  --client-secret your-client-secret \
-  --transport sse
+  --client-secret your-client-secret
 ```
+[//]: # (x-release-please-end)
 
-### Connecting your LLM
+### Connecting Your LLM
 
-Once the server is running, you can connect to it using any MCP-compatible client. For example:
+Once the MCP Server is installed, you can connect various LLM clients.
 
-```bash
-# Using the OpenAI API with MCP extension
-curl -X POST https://api.openai.com/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -d '{
-    "model": "gpt-4",
-    "messages": [
-      {"role": "system", "content": "You are a data analyst working with Firebolt."},
-      {"role": "user", "content": "How many users did we have last month?"}
-    ],
-    "tools": [
-      {
-        "type": "mcp",
-        "mcp": {
-          "endpoint": "http://localhost:8080",
-          "auth": {
-            "type": "bearer",
-            "token": "YOUR_TOKEN"
+Below are integration examples for **Claude**.
+For other clients like **GitHub Copilot Chat** and **Cursor**, please refer to their official documentation.
+
+#### Claude Desktop
+
+To integrate with Claude Desktop using **Docker**:
+
+1. Open the Claude menu and select **Settings…**.
+2. Navigate to **Developer** > **Edit Config**.
+3. Update the configuration file (`claude_desktop_config.json`) to include:
+
+    [//]: # (x-release-please-start-version)
+    ```json
+    {
+      "mcpServers": {
+        "firebolt": {
+          "command": "docker",
+          "args": [
+            "run",
+            "-i",
+            "--rm",
+            "-e FIREBOLT_MCP_CLIENT_ID=your-client-id",
+            "-e FIREBOLT_MCP_CLIENT_SECRET=your-client-secret",
+            "ghcr.io/firebolt-db/mcp-server:0.2.0"
+          ]
+        }
+      }
+    }
+    ```
+    [//]: # (x-release-please-end)
+
+    To use the **binary** instead of Docker:
+
+    ```json
+    {
+      "mcpServers": {
+        "firebolt": {
+          "command": "/path/to/firebolt-mcp-server",
+          "env": {
+            "FIREBOLT_MCP_CLIENT_ID": "your-client-id",
+            "FIREBOLT_MCP_CLIENT_SECRET": "your-client-secret"
           }
         }
       }
-    ]
-  }'
-```
+    }
+    ```
 
-## Requirements
+4. Save the config and restart Claude Desktop.
 
-- Firebolt service account credentials (client ID and client secret)
-- For development: Go 1.24.1 or later
-- For deployment: Docker (optional)
+More details: [Claude MCP Quickstart Guide](https://modelcontextprotocol.io/quickstart/user)
+
+#### GitHub Copilot Chat (VSCode)
+
+To integrate MCP with Copilot Chat in VSCode, refer to the official documentation:
+
+👉 [Extending Copilot Chat with the Model Context Protocol](https://docs.github.com/en/copilot/customizing-copilot/extending-copilot-chat-with-mcp)
+
+#### Cursor Editor
+
+To set up MCP in Cursor, follow their guide:
+
+👉 [Cursor Documentation on Model Context Protocol](https://docs.cursor.com/context/model-context-protocol)
 
 ## Architecture
 
-The Firebolt MCP Server implements the [Model Context Protocol](https://github.com/anthropics/anthropic-cookbook/tree/main/model_context_protocol) specification, providing:
+Firebolt MCP Server implements the [Model Context Protocol](https://modelcontextprotocol.io/introduction), providing:
 
 1. **Tools** - Task-specific capabilities provided to the LLM:
-   - `Connect`: Establish connections to Firebolt engines and databases
-   - `Docs`: Access Firebolt documentation
-   - `Query`: Execute SQL queries against Firebolt
+    - `firebolt_docs`: Access Firebolt documentation
+    - `firebolt_connect`: Establish connections to Firebolt engines and databases
+    - `firebolt_query`: Execute SQL queries against Firebolt
 
 2. **Resources** - Data that can be referenced by the LLM:
-   - Documentation articles
-   - Account information
-   - Database schema
-   - Engine statistics
+    - Documentation articles
+    - Lists of Accounts, Databases, Engines
 
 3. **Prompts** - Predefined instructions for the LLM:
-   - Firebolt Expert: Prompts the model to act as a Firebolt specialist
+    - Firebolt Expert: Prompts the model to act as a Firebolt specialist
 
 ## Development
 
@@ -159,26 +180,7 @@ task mod
 
 # Build the application
 task build
+
+# Run the tests
+tast test
 ```
-
-### Running tests
-
-```bash
-go test ./...
-```
-
-### Building Docker image
-
-```bash
-docker build -t firebolt-mcp-server .
-```
-
-## License
-
-MIT
-
----
-
-> [firebolt.io](https://www.firebolt.io) &nbsp;&middot;&nbsp;
-> GitHub [@firebolt-db](https://github.com/firebolt-db) &nbsp;&middot;&nbsp;
-> Twitter [@FireboltDB](https://twitter.com/FireboltDB)
