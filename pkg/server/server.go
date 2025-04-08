@@ -75,24 +75,27 @@ func NewServer(
 
 	// Configure logging hooks to track tool calls and errors
 	hooks := &mcpserver.Hooks{}
-	hooks.AddBeforeCallTool(func(id any, message *mcp.CallToolRequest) {
-		logger.Debug(
+	hooks.AddBeforeCallTool(func(ctx context.Context, id any, message *mcp.CallToolRequest) {
+		logger.DebugContext(
+			ctx,
 			"received tool call request",
 			slog.Any("id", id),
 			slog.String("tool", message.Params.Name),
 			slog.Any("arguments", message.Params.Arguments),
 		)
 	})
-	hooks.AddAfterCallTool(func(id any, message *mcp.CallToolRequest, result *mcp.CallToolResult) {
-		logger.Info(
+	hooks.AddAfterCallTool(func(ctx context.Context, id any, message *mcp.CallToolRequest, result *mcp.CallToolResult) {
+		logger.InfoContext(
+			ctx,
 			"tool call finished",
 			slog.Any("id", id),
 			slog.String("tool", message.Params.Name),
 			slog.Any("any", result.Result),
 		)
 	})
-	hooks.AddOnError(func(id any, method mcp.MCPMethod, message any, err error) {
-		logger.Error(
+	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {
+		logger.ErrorContext(
+			ctx,
 			"error occurred",
 			slog.Any("id", id),
 			slog.String("method", string(method)),
