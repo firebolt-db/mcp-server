@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/firebolt-db/mcp-server/compare/v0.3.0...v0.4.0) (2025-04-08)
+
+
+### Features
+
+* set version properly ([e39a519](https://github.com/firebolt-db/mcp-server/commit/e39a519bc42f8f13da97aa5e8aad957f572ad771))
+
 ## [0.3.0](https://github.com/firebolt-db/mcp-server/compare/v0.2.0...v0.3.0) (2025-04-08)
 
 
