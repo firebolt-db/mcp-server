@@ -28,7 +28,6 @@ jobs:
             -count=1 \
             -vet=all \
             -timeout 3m \
-            {{.CLI_ARGS}} \
             -coverpkg=./... \
             -covermode=atomic \
             -coverprofile=coverage.out \
