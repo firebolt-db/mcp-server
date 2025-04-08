@@ -15,6 +15,18 @@ tasks:
       go mod tidy
       go mod download
 
+  test:
+    desc: Run test suite
+    silent: true
+    cmd: |
+      go test \
+        -race \
+        -count=1 \
+        -vet=all \
+        -timeout 3m \
+        {{.CLI_ARGS}} \
+        ./...
+
   build:
     desc: Build application binary
     silent: true

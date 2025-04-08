@@ -134,7 +134,7 @@ func (t *Connect) Handler(ctx context.Context, request mcp.CallToolRequest) (*mc
 				return fmt.Errorf("failed to convert account resource to text resource")
 			}
 			var ar accountResource
-			err = json.Unmarshal([]byte(accountTextResource.Text), &ar)
+			err := json.Unmarshal([]byte(accountTextResource.Text), &ar)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal account resource: %w", err)
 			}
