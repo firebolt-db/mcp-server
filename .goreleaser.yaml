@@ -74,4 +74,6 @@ docker_manifests:
       - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-amd64
       - ghcr.io/firebolt-db/mcp-server:{{ .Version }}-arm64v8
 
-release: {}
+release:
+  replace_existing_artifacts: true
+  mode: keep-existing
