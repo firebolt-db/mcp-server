@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"runtime"
+	"runtime/debug"
 	"syscall"
 
 	"github.com/urfave/cli/v3"
@@ -18,7 +20,12 @@ import (
 	"github.com/firebolt-db/mcp-server/pkg/resources"
 	"github.com/firebolt-db/mcp-server/pkg/server"
 	"github.com/firebolt-db/mcp-server/pkg/tools"
-	"github.com/firebolt-db/mcp-server/pkg/version"
+)
+
+var (
+	version string = "0.0.0"
+	commit  string = "unknown"
+	date    string = "unknown"
 )
 
 func main() {
@@ -29,7 +36,7 @@ func main() {
 	cmd := &cli.Command{
 		Name:    "firebolt-mcp-server",
 		Usage:   "Model Context Protocol implementation that connects your LLM to Firebolt",
-		Version: version.GetFullVersion(),
+		Version: fullVersion(),
 		Authors: []any{"Firebolt Team"},
 		Description: "" +
 			"This MCP makes your LLM an expert in Firebolt cloud data warehouse with access to specialized tools and resources.\n" +
@@ -140,7 +147,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	)
 
 	// Start the server
-	logger.Info("Welcome to Firebolt MCP Server!", "version", version.GetFullVersion())
+	logger.Info("Welcome to Firebolt MCP Server!", "version", version)
 	if err = srv.Serve(ctx); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
@@ -156,4 +163,29 @@ func generateRandomSecret() string {
 		b[i] = charset[rand.Intn(len(charset))]
 	}
 	return string(b)
+}
+
+func fullVersion() string {
+
+	buildInfo, ok := debug.ReadBuildInfo()
+	if ok {
+		return fmt.Sprintf(
+			"%s (%s/%s, %s, %s, %s)",
+			version,
+			runtime.GOOS,
+			runtime.GOARCH,
+			buildInfo.GoVersion,
+			date,
+			commit,
+		)
+	}
+
+	return fmt.Sprintf(
+		"%s (%s/%s, %s, %s)",
+		version,
+		runtime.GOOS,
+		runtime.GOARCH,
+		date,
+		commit,
+	)
 }
