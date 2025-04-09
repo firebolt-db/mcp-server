@@ -116,7 +116,7 @@ func NewServer(
 			- Execute SQL queries against Firebolt databases
 		`),
 		mcpserver.WithHooks(hooks),
-		mcpserver.WithToolCapabilities(true),
+		mcpserver.WithToolCapabilities(false),
 		mcpserver.WithPromptCapabilities(false),
 		mcpserver.WithResourceCapabilities(false, false),
 	)
