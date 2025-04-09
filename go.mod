@@ -8,7 +8,6 @@ require (
 	github.com/gocolly/colly/v2 v2.2.0
 	github.com/mark3labs/mcp-go v0.18.0
 	github.com/neilotoole/slogt v1.1.0
-	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v3 v3.1.1
 	golang.org/x/oauth2 v0.29.0

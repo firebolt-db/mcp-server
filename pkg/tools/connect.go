@@ -3,10 +3,10 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/args"
