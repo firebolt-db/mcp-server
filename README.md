@@ -82,8 +82,8 @@ docker run \
 
 Once the MCP Server is installed, you can connect various LLM clients.
 
-Below are integration examples for **Claude**.
-For other clients like **GitHub Copilot Chat** and **Cursor**, please refer to their official documentation.
+Below are integration examples for **Claude Desktop**.
+For other clients like **VSCode Copilot Chat** and **Cursor**, please refer to their official documentation.
 
 #### Claude Desktop
 
