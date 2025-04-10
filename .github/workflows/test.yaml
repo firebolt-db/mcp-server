@@ -1,0 +1,50 @@
+name: test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests
+        run: |
+          go test \
+            -race \
+            -count=1 \
+            -vet=all \
+            -timeout 3m \
+            -coverpkg=./... \
+            -covermode=atomic \
+            -coverprofile=coverage.out \
+            ./...
+          go tool cover \
+            -html=coverage.out \
+            -o coverage.html
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONARCLOUD_TOKEN }}
+
+      - name: Upload assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.*
