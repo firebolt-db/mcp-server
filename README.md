@@ -182,5 +182,5 @@ task mod
 task build
 
 # Run the tests
-tast test
+task test
 ```
