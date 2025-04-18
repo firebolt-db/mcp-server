@@ -103,10 +103,14 @@ To integrate with Claude Desktop using **Docker**:
             "run",
             "-i",
             "--rm",
-            "-e", "FIREBOLT_MCP_CLIENT_ID=your-client-id",
-            "-e", "FIREBOLT_MCP_CLIENT_SECRET=your-client-secret",
+            "-e", "FIREBOLT_MCP_CLIENT_ID",
+            "-e", "FIREBOLT_MCP_CLIENT_SECRET",
             "ghcr.io/firebolt-db/mcp-server:0.2.1"
-          ]
+          ],
+          "env": {
+            "FIREBOLT_MCP_CLIENT_ID": "your-client-id",
+            "FIREBOLT_MCP_CLIENT_SECRET": "your-client-secret"
+          }
         }
       }
     }
@@ -144,6 +148,15 @@ To integrate MCP with Copilot Chat in VSCode, refer to the official documentatio
 To set up MCP in Cursor, follow their guide:
 
 👉 [Cursor Documentation on Model Context Protocol](https://docs.cursor.com/context/model-context-protocol)
+
+#### Using SSE Transport
+
+By default, the MCP Server uses STDIO as the transport mechanism.  
+However, Server-Sent Events (SSE) are also supported and require additional configuration.
+
+To enable SSE, set the `--transport` CLI flag (or the `FIREBOLT_MCP_SERVER_TRANSPORT` environment variable) to `sse`.
+
+Optionally, you can specify the address the server should listen on by setting the `--transport-sse-listen-address` CLI flag (or the `FIREBOLT_MCP_TRANSPORT_SSE_LISTEN_ADDRESS` environment variable).
 
 ## Architecture
 
