@@ -6,10 +6,10 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.1
 	github.com/firebolt-db/firebolt-go-sdk v1.7.1
 	github.com/gocolly/colly/v2 v2.2.0
-	github.com/mark3labs/mcp-go v0.20.1
+	github.com/mark3labs/mcp-go v0.22.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/stretchr/testify v1.10.0
-	github.com/urfave/cli/v3 v3.1.1
+	github.com/urfave/cli/v3 v3.2.0
 	golang.org/x/oauth2 v0.29.0
 	golang.org/x/sync v0.13.0
 )
@@ -35,6 +35,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/saintfish/chardet v0.0.0-20230101081208-5e3ef4b5456d // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
