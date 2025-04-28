@@ -21,14 +21,16 @@ type DocsResourcesFetcher interface {
 // Docs represents a tool for fetching and returning Firebolt documentation.
 // It provides access to documentation articles that explain Firebolt concepts and functionality.
 type Docs struct {
-	docsFetcher DocsResourcesFetcher // Fetches documentation resources
+	docsFetcher      DocsResourcesFetcher // Fetches documentation resources
+	disableResources bool                 // Return text content instead of embedded resources
 }
 
 // NewDocs creates a new instance of the Docs tool with the provided documentation fetcher.
 // It requires an implementation for fetching documentation articles.
-func NewDocs(docsFetcher DocsResourcesFetcher) *Docs {
+func NewDocs(docsFetcher DocsResourcesFetcher, disableResources bool) *Docs {
 	return &Docs{
-		docsFetcher: docsFetcher,
+		docsFetcher:      docsFetcher,
+		disableResources: disableResources,
 	}
 }
 
@@ -103,7 +105,7 @@ func (t *Docs) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return &mcp.CallToolResult{
 		Result: mcp.Result{},
 		Content: itertools.Map(results, func(i mcp.ResourceContents) mcp.Content {
-			return mcp.NewEmbeddedResource(i)
+			return textOrResourceContent(t.disableResources, i)
 		}),
 		IsError: false,
 	}, nil

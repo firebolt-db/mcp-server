@@ -44,6 +44,7 @@ type Connect struct {
 	databasesFetcher DatabaseResourcesFetcher // Fetches database resources
 	enginesFetcher   EngineResourcesFetcher   // Fetches engine resources
 	docsProof        string                   // Shared with the docs resources
+	disableResources bool                     // Return text content instead of embedded resources
 }
 
 // NewConnect creates a new instance of the Connect tool with the provided resource fetchers.
@@ -53,12 +54,14 @@ func NewConnect(
 	databasesFetcher DatabaseResourcesFetcher,
 	enginesFetcher EngineResourcesFetcher,
 	docsProof string,
+	disableResources bool,
 ) *Connect {
 	return &Connect{
 		accountsFetcher:  accountsFetcher,
 		databasesFetcher: databasesFetcher,
 		enginesFetcher:   enginesFetcher,
 		docsProof:        docsProof,
+		disableResources: disableResources,
 	}
 }
 
@@ -178,7 +181,7 @@ func (t *Connect) Handler(ctx context.Context, request mcp.CallToolRequest) (*mc
 	return &mcp.CallToolResult{
 		Result: mcp.Result{},
 		Content: itertools.Map(results, func(i mcp.ResourceContents) mcp.Content {
-			return mcp.NewEmbeddedResource(i)
+			return textOrResourceContent(t.disableResources, i)
 		}),
 		IsError: false,
 	}, nil
