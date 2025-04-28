@@ -63,7 +63,7 @@ func NewPoolWithConnectionFactory(
 }
 
 type poolImpl struct {
-	sync.RWMutex
+	sync.Mutex
 	isClosed          bool
 	logger            *slog.Logger
 	closers           []func()
@@ -75,6 +75,9 @@ type poolImpl struct {
 
 func (p *poolImpl) GetConnection(params PoolParams) (Connection, error) {
 
+	p.Lock()
+	defer p.Unlock()
+
 	connectionParams := ConnectionParams{
 		ClientID:     p.clientID,
 		ClientSecret: p.clientSecret,
@@ -84,17 +87,13 @@ func (p *poolImpl) GetConnection(params PoolParams) (Connection, error) {
 	}
 	hash := connectionParams.Hash()
 
-	// First, try to get an existing connection with a read lock
-	p.RLock()
+	// First, try to get an existing connection
 	if p.isClosed {
-		p.RUnlock()
 		return nil, ErrPoolClosed
 	}
 	if conn, ok := p.connections[hash]; ok {
-		p.RUnlock()
 		return conn, nil
 	}
-	p.RUnlock()
 
 	// Create a new connection if one doesn't exist
 	conn, closer, err := p.newConnectionFunc(p.logger, connectionParams)
@@ -102,11 +101,9 @@ func (p *poolImpl) GetConnection(params PoolParams) (Connection, error) {
 		return nil, fmt.Errorf("failed to create connection: %w", err)
 	}
 
-	// Store the new connection in the pool with a write lock
-	p.Lock()
+	// Store the new connection in the pool
 	p.connections[hash] = conn
 	p.closers = append(p.closers, closer)
-	p.Unlock()
 
 	return conn, nil
 }
