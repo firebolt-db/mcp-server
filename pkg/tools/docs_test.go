@@ -16,13 +16,13 @@ import (
 
 func TestNewDocs(t *testing.T) {
 	mock := &MockDocsFetcher{}
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 	assert.NotNil(t, docsTool)
 }
 
 func TestDocs_Tool(t *testing.T) {
 	mock := &MockDocsFetcher{}
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 
 	tool := docsTool.Tool()
 	assert.Equal(t, "firebolt_docs", tool.Name)
@@ -49,7 +49,7 @@ func TestDocs_Handler_DefaultArticles(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler with empty request (should return default articles)
 	request := mcp.CallToolRequest{}
@@ -103,7 +103,7 @@ func TestDocs_Handler_SpecificArticles(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler with specific articles
 	request := mcp.CallToolRequest{}
@@ -149,7 +149,7 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler
 	request := mcp.CallToolRequest{}
@@ -165,7 +165,7 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 func TestDocs_Handler_InvalidArticleID(t *testing.T) {
 	// Create the tool with any mock
 	mock := &MockDocsFetcher{}
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler with an invalid article ID type
 	request := mcp.CallToolRequest{}
@@ -195,7 +195,7 @@ func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock)
+	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler
 	request := mcp.CallToolRequest{}
@@ -226,6 +226,63 @@ func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 
 	assert.True(t, resourceMap["firebolt://docs/multi-resource-1"])
 	assert.True(t, resourceMap["firebolt://docs/multi-resource-2"])
+}
+
+func TestDocs_Handler_DisableResources(t *testing.T) {
+	// Create test data for default articles
+	mockArticles := map[string]string{
+		resources.DocsArticleOverview:  "# Firebolt Overview\nThis is an overview of Firebolt.",
+		resources.DocsArticleProof:     "# Proof Document\nSecret proof: proof_value_123",
+		resources.DocsArticleReference: "# Reference\nThis is the reference documentation.",
+	}
+
+	// Create mock fetcher that returns the mock articles
+	mock := &MockDocsFetcher{
+		FetchDocsFunc: func(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
+			content, exists := mockArticles[article]
+			if !exists {
+				return nil, errors.New("article not found")
+			}
+			return []mcp.ResourceContents{createDocResource(article, content)}, nil
+		},
+	}
+
+	// Create the tool with disableResources set to true
+	docsTool := tools.NewDocs(mock, true)
+
+	// Execute the handler with empty request (should return default articles)
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{}
+	result, err := docsTool.Handler(t.Context(), request)
+
+	// Assertions
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.IsError)
+
+	// Should return 3 default articles
+	assert.Len(t, result.Content, 3)
+
+	// Verify the content contains text content instead of embedded resources
+	textContents := make(map[string]string)
+	for _, content := range result.Content {
+		textContent, ok := content.(mcp.TextContent)
+		require.True(t, ok, "Expected TextContent when disableResources is true")
+		assert.NotEmpty(t, textContent.Text)
+
+		// Store the text content for verification
+		for articleID, expectedContent := range mockArticles {
+			if textContent.Text == expectedContent {
+				textContents[articleID] = textContent.Text
+			}
+		}
+	}
+
+	// Check if all default articles are present
+	for articleID, expectedContent := range mockArticles {
+		assert.Contains(t, textContents, articleID)
+		assert.Equal(t, expectedContent, textContents[articleID])
+	}
 }
 
 type MockDocsFetcher struct {

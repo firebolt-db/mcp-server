@@ -63,6 +63,13 @@ func main() {
 				Usage:    "SSE transport listen address (used only if transport is set to sse)",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_TRANSPORT_SSE_LISTEN_ADDRESS"),
 			},
+			&cli.BoolFlag{
+				Name:     "disable-resources",
+				Category: "MCP Transport",
+				Value:    false,
+				Usage:    "Return text content instead of embedded resources (for clients that do not support resources)",
+				Sources:  cli.EnvVars("FIREBOLT_MCP_DISABLE_RESOURCES"),
+			},
 			&cli.StringFlag{
 				Name:     "client-id",
 				Category: "Firebolt Authentication",
@@ -123,6 +130,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 
 	// Initialize MCP server
 	docsProof := generateRandomSecret()
+	disableResources := cmd.Bool("disable-resources")
 	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProof)
 	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceDatabases := resources.NewDatabases(dbPool)
@@ -133,8 +141,8 @@ func run(ctx context.Context, cmd *cli.Command) error {
 		cmd.String("transport"),
 		cmd.String("transport-sse-listen-address"),
 		[]server.Tool{
-			tools.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof),
-			tools.NewDocs(resourceDocs),
+			tools.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
+			tools.NewDocs(resourceDocs, disableResources),
 			tools.NewQuery(dbPool),
 		},
 		[]server.Prompt{

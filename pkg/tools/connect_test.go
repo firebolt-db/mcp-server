@@ -80,13 +80,13 @@ func createEngineResource(accountName, engineName string) mcp.ResourceContents {
 
 func TestNewConnect(t *testing.T) {
 	mock := &MockResourceFetcher{}
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 	assert.NotNil(t, connectTool)
 }
 
 func TestConnect_Tool(t *testing.T) {
 	mock := &MockResourceFetcher{}
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 
 	tool := connectTool.Tool()
 	assert.Equal(t, "firebolt_connect", tool.Name)
@@ -131,7 +131,7 @@ func TestConnect_Handler_Success(t *testing.T) {
 	}
 
 	// Create the tool
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 
 	// Execute the handler
 	request := mcp.CallToolRequest{}
@@ -199,7 +199,7 @@ func TestConnect_Handler_AccountFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{
 		"docs_proof": validProof,
@@ -225,7 +225,7 @@ func TestConnect_Handler_InvalidAccountResource(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{
 		"docs_proof": validProof,
@@ -251,7 +251,7 @@ func TestConnect_Handler_InvalidAccountJSON(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{
 		"docs_proof": validProof,
@@ -273,7 +273,7 @@ func TestConnect_Handler_DatabasesFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{
 		"docs_proof": validProof,
@@ -298,7 +298,7 @@ func TestConnect_Handler_EnginesFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof)
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 	request := mcp.CallToolRequest{}
 	request.Params.Arguments = map[string]any{
 		"docs_proof": validProof,
@@ -308,4 +308,74 @@ func TestConnect_Handler_EnginesFetchFailure(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to discover engine resources")
 	assert.Nil(t, result)
+}
+
+func TestConnect_Handler_DisableResources(t *testing.T) {
+	// Create test data
+	accounts := []string{"account1"}
+	databases := map[string][]string{
+		"account1": {"db1"},
+	}
+	engines := map[string][]string{
+		"account1": {"engine1"},
+	}
+
+	// Create mock fetcher
+	mock := &MockResourceFetcher{
+		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
+			var resources []mcp.ResourceContents
+			for _, acc := range accounts {
+				resources = append(resources, createAccountResource(acc))
+			}
+			return resources, nil
+		},
+		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error) {
+			var resources []mcp.ResourceContents
+			for _, db := range databases[accountName] {
+				resources = append(resources, createDatabaseResource(accountName, db))
+			}
+			return resources, nil
+		},
+		EnginesFunc: func(ctx context.Context, accountName, engineName string) ([]mcp.ResourceContents, error) {
+			var resources []mcp.ResourceContents
+			for _, eng := range engines[accountName] {
+				resources = append(resources, createEngineResource(accountName, eng))
+			}
+			return resources, nil
+		},
+	}
+
+	// Create the tool with disableResources set to true
+	connectTool := tools.NewConnect(mock, mock, mock, validProof, true)
+
+	// Execute the handler
+	request := mcp.CallToolRequest{}
+	request.Params.Arguments = map[string]any{
+		"docs_proof": validProof,
+	}
+	result, err := connectTool.Handler(t.Context(), request)
+
+	// Assertions
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.False(t, result.IsError)
+
+	// Calculate expected total resources
+	expectedCount := len(accounts) // accounts
+	for _, dbs := range databases {
+		expectedCount += len(dbs) // databases
+	}
+	for _, engs := range engines {
+		expectedCount += len(engs) // engines
+	}
+
+	// Check if we got the expected number of resources
+	assert.Len(t, result.Content, expectedCount)
+
+	// Verify the content contains text content instead of embedded resources
+	for _, content := range result.Content {
+		textContent, ok := content.(mcp.TextContent)
+		require.True(t, ok, "Expected TextContent when disableResources is true")
+		assert.NotEmpty(t, textContent.Text)
+	}
 }
