@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/firebolt-db/mcp-server/compare/v0.2.1...v0.3.0) (2025-04-28)
+
+
+### Features
+
+* add support for text-only content in MCP tools ([#20](https://github.com/firebolt-db/mcp-server/issues/20)) ([c509b6d](https://github.com/firebolt-db/mcp-server/commit/c509b6d704a55f65db486dc265ed25ac9de033d5))
+
+
+### Dependencies
+
+* **gomod:** bump the go-deps group with 2 updates ([#18](https://github.com/firebolt-db/mcp-server/issues/18)) ([175ed4b](https://github.com/firebolt-db/mcp-server/commit/175ed4b2b79540ea2055b72d07e7180e20116977))
+
 ## [0.2.1](https://github.com/firebolt-db/mcp-server/compare/v0.2.0...v0.2.1) (2025-04-17)
 
 
