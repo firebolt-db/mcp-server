@@ -3,15 +3,15 @@ module github.com/firebolt-db/mcp-server
 go 1.24.1
 
 require (
-	github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.1
-	github.com/firebolt-db/firebolt-go-sdk v1.7.1
+	github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.2
+	github.com/firebolt-db/firebolt-go-sdk v1.8.0
 	github.com/gocolly/colly/v2 v2.2.0
-	github.com/mark3labs/mcp-go v0.22.0
+	github.com/mark3labs/mcp-go v0.25.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/stretchr/testify v1.10.0
-	github.com/urfave/cli/v3 v3.2.0
-	golang.org/x/oauth2 v0.29.0
-	golang.org/x/sync v0.13.0
+	github.com/urfave/cli/v3 v3.3.2
+	golang.org/x/oauth2 v0.30.0
+	golang.org/x/sync v0.14.0
 )
 
 require (
@@ -40,8 +40,8 @@ require (
 	github.com/temoto/robotstxt v1.1.2 // indirect
 	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	golang.org/x/net v0.38.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/text v0.24.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
