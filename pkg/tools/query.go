@@ -80,8 +80,8 @@ func (t *Query) Tool() mcp.Tool {
 func (t *Query) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	// Extract the required and optional arguments from the request
-	requireds, err1 := args.Strings(request.Params.Arguments, "query", "account")
-	optionals, err2 := args.MaybeStrings(request.Params.Arguments, "database", "engine")
+	requireds, err1 := args.Strings(request.GetArguments(), "query", "account")
+	optionals, err2 := args.MaybeStrings(request.GetArguments(), "database", "engine")
 	if err := errors.Join(err1, err2); err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}

@@ -92,7 +92,7 @@ func (t *Connect) Tool() mcp.Tool {
 func (t *Connect) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 
 	// Verify docs read proof
-	proof, err := args.String(request.Params.Arguments, "docs_proof")
+	proof, err := args.String(request.GetArguments(), "docs_proof")
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
