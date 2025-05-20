@@ -72,7 +72,7 @@ func (t *Docs) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	)
 
 	// Extract article IDs from request parameters if provided
-	val, ok := request.Params.Arguments["articles"]
+	val, ok := request.GetArguments()["articles"]
 	if ok && val != nil {
 		articleIDs = val.([]any)
 	} else {
