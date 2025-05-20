@@ -6,7 +6,7 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.3.2
 	github.com/firebolt-db/firebolt-go-sdk v1.8.1
 	github.com/gocolly/colly/v2 v2.2.0
-	github.com/mark3labs/mcp-go v0.27.0
+	github.com/mark3labs/mcp-go v0.29.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/stretchr/testify v1.10.0
 	github.com/urfave/cli/v3 v3.3.3
