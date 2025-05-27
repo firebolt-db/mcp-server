@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/firebolt-db/mcp-server/compare/v0.3.1...v0.3.2) (2025-05-27)
+
+
+### Dependencies
+
+* **gomod:** bump the go-deps group with 2 updates ([#28](https://github.com/firebolt-db/mcp-server/issues/28)) ([fe9b648](https://github.com/firebolt-db/mcp-server/commit/fe9b64880bd21284a869b09a2cc708098882d139))
+
 ## [0.3.1](https://github.com/firebolt-db/mcp-server/compare/v0.3.0...v0.3.1) (2025-05-20)
 
 
