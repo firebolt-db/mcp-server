@@ -154,7 +154,7 @@ To set up MCP in Cursor, follow their guide:
 By default, the MCP Server uses STDIO as the transport mechanism.  
 However, Server-Sent Events (SSE) are also supported and require additional configuration.
 
-To enable SSE, set the `--transport` CLI flag (or the `FIREBOLT_MCP_SERVER_TRANSPORT` environment variable) to `sse`.
+To enable SSE, set the `--transport` CLI flag (or the `FIREBOLT_MCP_TRANSPORT` environment variable) to `sse`.
 
 Optionally, you can specify the address the server should listen on by setting the `--transport-sse-listen-address` CLI flag (or the `FIREBOLT_MCP_TRANSPORT_SSE_LISTEN_ADDRESS` environment variable).
 
