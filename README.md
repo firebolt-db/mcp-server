@@ -149,6 +149,16 @@ To set up MCP in Cursor, follow their guide:
 
 👉 [Cursor Documentation on Model Context Protocol](https://docs.cursor.com/context/model-context-protocol)
 
+> [!IMPORTANT]  
+> Cursor **does not support MCP resources** yet.
+This MCP server uses resources heavily, so **it will not work in Cursor** unless you explicitly disable resource usage.
+
+To make it work, you **must** set the following environment variable:
+
+```
+FIREBOLT_MCP_DISABLE_RESOURCES=true
+```
+
 #### Using SSE Transport
 
 By default, the MCP Server uses STDIO as the transport mechanism.  

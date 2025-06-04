@@ -5,6 +5,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"log/slog"
@@ -84,12 +85,13 @@ func NewServer(
 		)
 	})
 	hooks.AddAfterCallTool(func(ctx context.Context, id any, message *mcp.CallToolRequest, result *mcp.CallToolResult) {
+		jd, _ := json.Marshal(result)
 		logger.InfoContext(
 			ctx,
 			"tool call finished",
 			slog.Any("id", id),
 			slog.String("tool", message.Params.Name),
-			slog.Any("any", result.Result),
+			slog.String("result", string(jd)),
 		)
 	})
 	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {

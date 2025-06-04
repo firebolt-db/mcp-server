@@ -75,8 +75,10 @@ func (t *Docs) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	val, ok := request.GetArguments()["articles"]
 	if ok && val != nil {
 		articleIDs = val.([]any)
-	} else {
-		// Default articles to return if none specified
+	}
+
+	// Default articles to return if none specified
+	if len(articleIDs) == 0 {
 		articleIDs = append(
 			articleIDs,
 			resources.DocsArticleOverview,  // General Firebolt overview
