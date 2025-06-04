@@ -117,7 +117,12 @@ func (r *Docs) FetchDocsResources(_ context.Context, article string) ([]mcp.Reso
 
 	default:
 
-		// For other articles, read the file directly from the filesystem
+		// Sometimes LLMs forget to add the .md extension, so we check for that
+		if !strings.HasSuffix(article, ".md") {
+			article += ".md"
+		}
+
+		// Read the file directly from the filesystem
 		fileData, err := r.docsFS.ReadFile(article)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file %s: %w", article, err)
