@@ -89,7 +89,6 @@ func NewServer(
 			"tool call finished",
 			slog.Any("id", id),
 			slog.String("tool", message.Params.Name),
-			slog.Any("any", result.Result),
 		)
 	})
 	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {
