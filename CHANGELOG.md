@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.2](https://github.com/firebolt-db/mcp-server/compare/v0.3.1...v0.3.2) (2025-06-04)
+
+
+### Bug Fixes
+
+* improve MCP resources disabling ([#32](https://github.com/firebolt-db/mcp-server/issues/32)) ([f9e9d54](https://github.com/firebolt-db/mcp-server/commit/f9e9d541dcbd3bcf26b49c75b4c2081ac793b3e3))
+
+
+### Dependencies
+
+* **gomod:** bump the go-deps group with 2 updates ([#28](https://github.com/firebolt-db/mcp-server/issues/28)) ([fe9b648](https://github.com/firebolt-db/mcp-server/commit/fe9b64880bd21284a869b09a2cc708098882d139))
+* **gomod:** bump the go-deps group with 2 updates ([#31](https://github.com/firebolt-db/mcp-server/issues/31)) ([da1af7c](https://github.com/firebolt-db/mcp-server/commit/da1af7c3a32d6941e5eee262733379a0dc17e959))
+
 ## [0.3.1](https://github.com/firebolt-db/mcp-server/compare/v0.3.0...v0.3.1) (2025-05-20)
 
 
