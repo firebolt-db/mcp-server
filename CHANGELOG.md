@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/firebolt-db/mcp-server/compare/v0.3.2...v0.4.0) (2025-06-04)
+
+
+### Features
+
+* handle missing .md extension in article filenames ([#33](https://github.com/firebolt-db/mcp-server/issues/33)) ([03968bf](https://github.com/firebolt-db/mcp-server/commit/03968bf7bdec81db2edb4849d6334844947b8be3))
+
 ## [0.3.2](https://github.com/firebolt-db/mcp-server/compare/v0.3.1...v0.3.2) (2025-06-04)
 
 
