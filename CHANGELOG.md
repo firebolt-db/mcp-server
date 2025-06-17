@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/firebolt-db/mcp-server/compare/v0.4.0...v0.4.1) (2025-06-17)
+
+
+### Dependencies
+
+* **github-actions:** bump sigstore/cosign-installer from 3.8.2 to 3.9.0 in the github-actions-deps group ([#36](https://github.com/firebolt-db/mcp-server/issues/36)) ([f83ed9c](https://github.com/firebolt-db/mcp-server/commit/f83ed9cbbcd58976f64342fdb8790386ecb0460e))
+
 ## [0.4.0](https://github.com/firebolt-db/mcp-server/compare/v0.3.2...v0.4.0) (2025-06-04)
 
 
