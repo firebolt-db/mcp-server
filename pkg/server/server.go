@@ -1,18 +1,13 @@
-// Package server provides the core MCP server implementation for the Firebolt MCP.
-// It defines interfaces for tools, prompts, and resource templates that can be registered
-// with the server, as well as methods for serving the MCP over different transports.
 package server
 
 import (
 	"context"
 	"errors"
-	"log"
 	"log/slog"
-	"os"
+	"net/http"
 	"time"
 
-	"github.com/mark3labs/mcp-go/mcp"
-	mcpserver "github.com/mark3labs/mcp-go/server"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Server represents the interface for the MCP server functionality.
@@ -24,30 +19,30 @@ type Server interface {
 }
 
 // Tool represents a callable tool that can be registered with the MCP server.
-// It provides methods to define the tool metadata and handle tool calls.
+// It provides methods to define the tool metadata and register it in mcp server.
 type Tool interface {
-	// Tool returns the MCP tool definition with its name, description, parameters, etc.
-	Tool() mcp.Tool
-	// Handler processes tool call requests and returns results.
-	Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error)
+	// Tool returns the MCP tool definition.
+	Tool() *mcp.Tool
+	// Register adds the tool to the server using its specific generic types.
+	Register(s *mcp.Server)
 }
 
 // Prompt represents a prompt that can be registered with the MCP server.
 // It provides methods to define the prompt metadata and handle prompt requests.
 type Prompt interface {
 	// Prompt returns the MCP prompt definition.
-	Prompt() mcp.Prompt
+	Prompt() *mcp.Prompt
 	// Handler processes prompt requests and returns results.
-	Handler(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error)
+	Handler(ctx context.Context, request *mcp.GetPromptRequest) (*mcp.GetPromptResult, error)
 }
 
 // ResourceTemplate represents a resource template that can be registered with the MCP server.
 // It provides methods to define the resource template metadata and handle resource requests.
 type ResourceTemplate interface {
 	// ResourceTemplate returns the MCP resource template definition.
-	ResourceTemplate() mcp.ResourceTemplate
+	ResourceTemplate() *mcp.ResourceTemplate
 	// Handler processes resource read requests and returns resource contents.
-	Handler(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error)
+	Handler(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error)
 }
 
 // NewServer creates a new MCP server with the provided configuration.
@@ -72,84 +67,51 @@ func NewServer(
 	resourceTemplates []ResourceTemplate,
 ) Server {
 
-	// Configure logging hooks to track tool calls and errors
-	hooks := &mcpserver.Hooks{}
-	hooks.AddBeforeCallTool(func(ctx context.Context, id any, message *mcp.CallToolRequest) {
-		logger.DebugContext(
-			ctx,
-			"received tool call request",
-			slog.Any("id", id),
-			slog.String("tool", message.Params.Name),
-			slog.Any("arguments", message.Params.Arguments),
-		)
-	})
-	hooks.AddAfterCallTool(func(ctx context.Context, id any, message *mcp.CallToolRequest, result *mcp.CallToolResult) {
-		logger.InfoContext(
-			ctx,
-			"tool call finished",
-			slog.Any("id", id),
-			slog.String("tool", message.Params.Name),
-		)
-	})
-	hooks.AddOnError(func(ctx context.Context, id any, method mcp.MCPMethod, message any, err error) {
-		logger.ErrorContext(
-			ctx,
-			"error occurred",
-			slog.Any("id", id),
-			slog.String("method", string(method)),
-			slog.Any("message", message),
-			slog.String("error", err.Error()),
-		)
-	})
-
-	// Initialize the MCP server with Firebolt-specific configuration
-	mcpSrv := mcpserver.NewMCPServer(
-		"Firebolt MCP Server",
-		version,
-		mcpserver.WithInstructions(`
-			This MCP makes you a Firebolt cloud data warehouse expert with access to specialized tools and resources.
+	mcpSrv := mcp.NewServer(
+		&mcp.Implementation{
+			Name:       "Firebolt MCP Server",
+			Title:      "Firebolt MCP Server",
+			Version:    version,
+			WebsiteURL: "https://firebolt.io",
+		},
+		&mcp.ServerOptions{
+			Instructions: `This MCP makes you a Firebolt cloud data warehouse expert with access to specialized tools and resources.
 			You can assist with SQL queries, data modeling, performance optimization, and analytics for Firebolt.
 			
 			Use available tools and resources to:
 			- Access Firebolt documentation for reference
-			- Execute SQL queries against Firebolt databases
-		`),
-		mcpserver.WithHooks(hooks),
-		mcpserver.WithToolCapabilities(false),
-		mcpserver.WithPromptCapabilities(false),
-		mcpserver.WithResourceCapabilities(false, false),
+			- Execute SQL queries against Firebolt databases`,
+		},
 	)
 
-	// Register the tools, prompts, and resource templates with the server
-	mcpSrv.AddTools(transform(tools, func(i Tool) mcpserver.ServerTool {
-		return mcpserver.ServerTool{
-			Tool:    i.Tool(),
-			Handler: i.Handler,
-		}
-	})...)
+	// register tool call logging middleware
+	mcpSrv.AddReceivingMiddleware(logging(logger))
+
+	for _, tool := range tools {
+		tool.Register(mcpSrv)
+	}
+
 	for _, prompt := range prompts {
 		mcpSrv.AddPrompt(prompt.Prompt(), prompt.Handler)
 	}
+
 	for _, resourceTemplate := range resourceTemplates {
 		mcpSrv.AddResourceTemplate(resourceTemplate.ResourceTemplate(), resourceTemplate.Handler)
 	}
 
-	// Initialize the server implementation with the configured MCP server
-	s := &serverImpl{
+	return &serverImpl{
 		logger:              logger,
 		inner:               mcpSrv,
 		transport:           transport,
 		transportSSEAddress: transportSSEAddress,
 	}
-
-	return s
 }
 
 // serverImpl is the implementation of the Server interface.
 // It wraps an MCP server and provides methods to serve it over different transports.
 type serverImpl struct {
 	logger              *slog.Logger
-	inner               *mcpserver.MCPServer
+	inner               *mcp.Server
 	transport           string
 	transportSSEAddress string
 }
@@ -173,21 +135,22 @@ func (s *serverImpl) Serve(ctx context.Context) error {
 func (s *serverImpl) serveStdio(ctx context.Context) error {
 	s.logger.Info("Using stdio transport")
 
-	srv := mcpserver.NewStdioServer(s.inner)
-	srv.SetErrorLogger(log.New(os.Stderr, "", log.LstdFlags))
-
-	return srv.Listen(ctx, os.Stdin, os.Stdout)
+	return s.inner.Run(ctx, &mcp.StdioTransport{})
 }
 
-// serveSSE starts the server using the SSE transport.
-// It listens for HTTP requests on the configured address and serves MCP requests over SSE.
-// The server will shut down gracefully when the context is canceled.
 func (s *serverImpl) serveSSE(ctx context.Context) error {
 	s.logger.Info("Using sse transport", "listen_address", s.transportSSEAddress)
 
-	srv := mcpserver.NewSSEServer(s.inner)
+	handler := mcp.NewSSEHandler(func(request *http.Request) *mcp.Server {
+		return s.inner
+	}, nil)
 
-	// Setup graceful shutdown when context is canceled
+	// Configure the HTTP server
+	srv := &http.Server{
+		Addr:    s.transportSSEAddress,
+		Handler: handler,
+	}
+
 	go func() {
 		<-ctx.Done()
 		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -197,16 +160,9 @@ func (s *serverImpl) serveSSE(ctx context.Context) error {
 		}
 	}()
 
-	return srv.Start(s.transportSSEAddress)
-}
-
-// transform is a utility function that applies a transformation function to each element
-// of the input slice and returns a new slice containing the transformed elements.
-// It's a generic function that works with any input and output types.
-func transform[I, O any](inputs []I, transformer func(I) O) []O {
-	outputs := make([]O, len(inputs))
-	for i, input := range inputs {
-		outputs[i] = transformer(input)
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return err
 	}
-	return outputs
+
+	return nil
 }

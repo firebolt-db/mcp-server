@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
 	"github.com/firebolt-db/mcp-server/pkg/helpers/args"
@@ -32,21 +32,24 @@ func NewDatabases(dbPool database.Pool) *Databases {
 
 // ResourceTemplate defines the template for database resources.
 // It specifies the URI format, content type, description, and suggested usage.
-func (r *Databases) ResourceTemplate() mcp.ResourceTemplate {
-	return mcp.NewResourceTemplate(
-		DatabaseURI("{account}", "{database}"),
-		"Database",
-		mcp.WithTemplateMIMEType(mimetype.JSON),
-		mcp.WithTemplateAnnotations([]mcp.Role{mcp.RoleUser, mcp.RoleAssistant}, 0.8),
-		mcp.WithTemplateDescription("Brief information about the database in the Firebolt account."),
-	)
+func (r *Databases) ResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
+		URITemplate: DatabaseURI("{account}", "{database}"),
+		Name:        "Database",
+		MIMEType:    mimetype.JSON,
+		Description: "Brief information about the database in the Firebolt account.",
+		Annotations: &mcp.Annotations{
+			Audience: []mcp.Role{"user", "assistant"},
+			Priority: 0.8,
+		},
+	}
 }
 
 // Handler processes resource requests for database information.
 // It extracts account and database parameters and fetches the appropriate database data.
-func (r *Databases) Handler(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+func (r *Databases) Handler(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 
-	values, err := args.Strings(request.Params.Arguments, "account", "database")
+	values, err := args.Strings(request.GetParams().GetMeta(), "account", "database")
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -56,7 +59,7 @@ func (r *Databases) Handler(ctx context.Context, request mcp.ReadResourceRequest
 
 // FetchDatabaseResources retrieves database information from the Firebolt service.
 // If a specific database is specified, it filters for that database; otherwise, it returns all databases.
-func (r *Databases) FetchDatabaseResources(ctx context.Context, account, dbName string) ([]mcp.ResourceContents, error) {
+func (r *Databases) FetchDatabaseResources(ctx context.Context, account, dbName string) (*mcp.ReadResourceResult, error) {
 
 	// Acquire a connection to the database
 	conn, err := r.dbPool.GetConnection(database.PoolParams{
@@ -83,18 +86,25 @@ func (r *Databases) FetchDatabaseResources(ctx context.Context, account, dbName 
 	}
 
 	// Convert rows to resources
-	return itertools.MapWithFailure(rows, func(i map[string]any) (mcp.ResourceContents, error) {
+	out, err := itertools.MapWithFailure(rows, func(i map[string]any) (*mcp.ResourceContents, error) {
 
 		i["account_name"] = account
 		data, err := json.Marshal(i)
 		if err != nil {
-			return mcp.TextResourceContents{}, fmt.Errorf("failed to marshal row data to JSON: %w", err)
+			return nil, fmt.Errorf("failed to marshal row data to JSON: %w", err)
 		}
 
-		return mcp.TextResourceContents{
+		return &mcp.ResourceContents{
 			URI:      DatabaseURI(account, i["database_name"].(string)),
 			MIMEType: mimetype.JSON,
 			Text:     string(data),
 		}, nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcp.ReadResourceResult{
+		Contents: out,
+	}, nil
 }

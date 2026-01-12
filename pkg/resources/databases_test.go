@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -152,8 +152,11 @@ func TestDatabases_Handler(t *testing.T) {
 
 			databases := resources.NewDatabases(pool)
 
-			request := mcp.ReadResourceRequest{}
-			request.Params.Arguments = tt.params
+			request := &mcp.ReadResourceRequest{
+				Params: &mcp.ReadResourceParams{
+					Meta: tt.params,
+				},
+			}
 
 			result, err := databases.Handler(t.Context(), request)
 
@@ -164,19 +167,16 @@ func TestDatabases_Handler(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Len(t, result, len(tt.expected))
+			require.Len(t, result.Contents, len(tt.expected))
 
-			for i, res := range result {
-				textRes, ok := res.(mcp.TextResourceContents)
-				require.True(t, ok, "Expected TextResourceContents")
-
+			for i, res := range result.Contents {
 				var data map[string]any
-				err := json.Unmarshal([]byte(textRes.Text), &data)
+				err := json.Unmarshal([]byte(res.Text), &data)
 				require.NoError(t, err)
 
 				assert.Equal(t, tt.expected[i], data)
-				assert.Equal(t, resources.DatabaseURI("test-account", data["database_name"].(string)), textRes.URI)
-				assert.Equal(t, mimetype.JSON, textRes.MIMEType)
+				assert.Equal(t, resources.DatabaseURI("test-account", data["database_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
 			}
 		})
 	}
@@ -288,19 +288,16 @@ func TestDatabases_FetchDatabaseResources(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Len(t, result, len(tt.expected))
+			require.Len(t, result.Contents, len(tt.expected))
 
-			for i, res := range result {
-				textRes, ok := res.(mcp.TextResourceContents)
-				require.True(t, ok, "Expected TextResourceContents")
-
+			for i, res := range result.Contents {
 				var data map[string]any
-				err := json.Unmarshal([]byte(textRes.Text), &data)
+				err := json.Unmarshal([]byte(res.Text), &data)
 				require.NoError(t, err)
 
 				assert.Equal(t, tt.expected[i], data)
-				assert.Equal(t, resources.DatabaseURI(tt.account, data["database_name"].(string)), textRes.URI)
-				assert.Equal(t, mimetype.JSON, textRes.MIMEType)
+				assert.Equal(t, resources.DatabaseURI(tt.account, data["database_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
 			}
 		})
 	}

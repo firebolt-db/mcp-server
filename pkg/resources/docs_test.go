@@ -4,7 +4,7 @@ import (
 	"io/fs"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -31,16 +31,18 @@ func TestDocs_Handler(t *testing.T) {
 
 	t.Run("fetch overview article", func(t *testing.T) {
 
-		request := mcp.ReadResourceRequest{}
-		request.Params.Arguments = map[string]any{
-			"article": resources.DocsArticleOverview,
+		request := &mcp.ReadResourceRequest{
+			Params: &mcp.ReadResourceParams{
+				Meta: map[string]any{
+					"article": resources.DocsArticleOverview,
+				},
+			},
 		}
 
-		contents, err := docs.Handler(t.Context(), request)
+		result, err := docs.Handler(t.Context(), request)
 		assert.NoError(t, err)
-		require.Len(t, contents, 1)
-		resource, ok := contents[0].(*mcp.TextResourceContents)
-		require.True(t, ok)
+		require.Len(t, result.Contents, 1)
+		resource := result.Contents[0]
 		assert.Equal(t, resources.DocsURI(resources.DocsArticleOverview), resource.URI)
 		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
 		assert.Contains(t, resource.Text, "Foundational Knowledge Layer", "should contain the Foundational Knowledge Layer")
@@ -48,16 +50,18 @@ func TestDocs_Handler(t *testing.T) {
 
 	t.Run("fetch proof article", func(t *testing.T) {
 
-		request := mcp.ReadResourceRequest{}
-		request.Params.Arguments = map[string]any{
-			"article": resources.DocsArticleProof,
+		request := &mcp.ReadResourceRequest{
+			Params: &mcp.ReadResourceParams{
+				Meta: map[string]any{
+					"article": resources.DocsArticleProof,
+				},
+			},
 		}
 
-		contents, err := docs.Handler(t.Context(), request)
+		result, err := docs.Handler(t.Context(), request)
 		assert.NoError(t, err)
-		require.Len(t, contents, 1)
-		resource, ok := contents[0].(*mcp.TextResourceContents)
-		require.True(t, ok)
+		require.Len(t, result.Contents, 1)
+		resource := result.Contents[0]
 		assert.Equal(t, resources.DocsURI(resources.DocsArticleProof), resource.URI)
 		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
 		assert.Contains(t, resource.Text, "test-proof", "should contain the proof value")
@@ -70,16 +74,18 @@ func TestDocs_Handler(t *testing.T) {
 			newMockDirEntry("file2.md", false),
 		}, nil)
 
-		request := mcp.ReadResourceRequest{}
-		request.Params.Arguments = map[string]any{
-			"article": resources.DocsArticleReference,
+		request := &mcp.ReadResourceRequest{
+			Params: &mcp.ReadResourceParams{
+				Meta: map[string]any{
+					"article": resources.DocsArticleReference,
+				},
+			},
 		}
 
-		contents, err := docs.Handler(t.Context(), request)
+		result, err := docs.Handler(t.Context(), request)
 		assert.NoError(t, err)
-		require.Len(t, contents, 1)
-		resource, ok := contents[0].(*mcp.TextResourceContents)
-		require.True(t, ok)
+		require.Len(t, result.Contents, 1)
+		resource := result.Contents[0]
 		assert.Equal(t, resources.DocsURI(resources.DocsArticleReference), resource.URI)
 		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
 		assert.Contains(t, resource.Text, "file1.md")
@@ -90,16 +96,18 @@ func TestDocs_Handler(t *testing.T) {
 
 		mockFS.On("ReadFile", "file1.md").Return([]byte("# File 1 Content"), nil)
 
-		request := mcp.ReadResourceRequest{}
-		request.Params.Arguments = map[string]any{
-			"article": "file1.md",
+		request := &mcp.ReadResourceRequest{
+			Params: &mcp.ReadResourceParams{
+				Meta: map[string]any{
+					"article": "file1.md",
+				},
+			},
 		}
 
-		contents, err := docs.Handler(t.Context(), request)
+		result, err := docs.Handler(t.Context(), request)
 		assert.NoError(t, err)
-		require.Len(t, contents, 1)
-		resource, ok := contents[0].(*mcp.TextResourceContents)
-		require.True(t, ok)
+		require.Len(t, result.Contents, 1)
+		resource := result.Contents[0]
 		assert.Equal(t, resources.DocsURI("file1.md"), resource.URI)
 		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
 		assert.Equal(t, "# File 1 Content", resource.Text)

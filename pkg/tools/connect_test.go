@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -18,52 +18,52 @@ const validProof = "valid_proof"
 
 // MockResourceFetcher is a test implementation of the resource fetcher interfaces
 type MockResourceFetcher struct {
-	AccountsFunc  func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error)
-	DatabasesFunc func(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error)
-	EnginesFunc   func(ctx context.Context, accountName, engineName string) ([]mcp.ResourceContents, error)
+	AccountsFunc  func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error)
+	DatabasesFunc func(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error)
+	EnginesFunc   func(ctx context.Context, accountName, engineName string) (*mcp.ReadResourceResult, error)
 }
 
-func (m *MockResourceFetcher) FetchAccountResources(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
+func (m *MockResourceFetcher) FetchAccountResources(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
 	return m.AccountsFunc(ctx, accountName)
 }
 
-func (m *MockResourceFetcher) FetchDatabaseResources(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error) {
+func (m *MockResourceFetcher) FetchDatabaseResources(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error) {
 	return m.DatabasesFunc(ctx, accountName, databaseName)
 }
 
-func (m *MockResourceFetcher) FetchEngineResources(ctx context.Context, accountName, engineName string) ([]mcp.ResourceContents, error) {
+func (m *MockResourceFetcher) FetchEngineResources(ctx context.Context, accountName, engineName string) (*mcp.ReadResourceResult, error) {
 	return m.EnginesFunc(ctx, accountName, engineName)
 }
 
 // Helpers to create resource mocks
-func createAccountResource(name string) mcp.ResourceContents {
+func createAccountResource(name string) *mcp.ResourceContents {
 	account := map[string]string{
 		"name":   name,
 		"region": "us-east-1",
 	}
 	data, _ := json.Marshal(account)
-	return mcp.TextResourceContents{
+	return &mcp.ResourceContents{
 		URI:      "firebolt://accounts/" + name,
 		MIMEType: mimetype.JSON,
 		Text:     string(data),
 	}
 }
 
-func createDatabaseResource(accountName, databaseName string) mcp.ResourceContents {
+func createDatabaseResource(accountName, databaseName string) *mcp.ResourceContents {
 	database := map[string]string{
 		"account_name":  accountName,
 		"database_name": databaseName,
 		"description":   "Description for " + databaseName,
 	}
 	data, _ := json.Marshal(database)
-	return mcp.TextResourceContents{
+	return &mcp.ResourceContents{
 		URI:      "firebolt://accounts/" + accountName + "/databases/" + databaseName,
 		MIMEType: mimetype.JSON,
 		Text:     string(data),
 	}
 }
 
-func createEngineResource(accountName, engineName string) mcp.ResourceContents {
+func createEngineResource(accountName, engineName string) *mcp.ResourceContents {
 	engine := map[string]string{
 		"account_name": accountName,
 		"engine_name":  engineName,
@@ -71,7 +71,7 @@ func createEngineResource(accountName, engineName string) mcp.ResourceContents {
 		"description":  "Description for " + engineName,
 	}
 	data, _ := json.Marshal(engine)
-	return mcp.TextResourceContents{
+	return &mcp.ResourceContents{
 		URI:      "firebolt://accounts/" + accountName + "/engines/" + engineName,
 		MIMEType: mimetype.JSON,
 		Text:     string(data),
@@ -107,26 +107,32 @@ func TestConnect_Handler_Success(t *testing.T) {
 
 	// Create mock fetcher
 	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
-			var resources []mcp.ResourceContents
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
 			for _, acc := range accounts {
 				resources = append(resources, createAccountResource(acc))
 			}
-			return resources, nil
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
 		},
-		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error) {
-			var resources []mcp.ResourceContents
+		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
 			for _, db := range databases[accountName] {
 				resources = append(resources, createDatabaseResource(accountName, db))
 			}
-			return resources, nil
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
 		},
-		EnginesFunc: func(ctx context.Context, accountName, engineName string) ([]mcp.ResourceContents, error) {
-			var resources []mcp.ResourceContents
+		EnginesFunc: func(ctx context.Context, accountName, engineName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
 			for _, eng := range engines[accountName] {
 				resources = append(resources, createEngineResource(accountName, eng))
 			}
-			return resources, nil
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
 		},
 	}
 
@@ -134,15 +140,16 @@ func TestConnect_Handler_Success(t *testing.T) {
 	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
 
 	// Execute the handler
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
+	request := &mcp.CallToolRequest{}
+	in := tools.ConnectInput{
+		DocsProof: validProof,
 	}
-	result, err := connectTool.Handler(t.Context(), request)
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
 	require.NotNil(t, result)
+	require.NotNil(t, out)
 	assert.False(t, result.IsError)
 
 	// Calculate expected total resources
@@ -155,18 +162,15 @@ func TestConnect_Handler_Success(t *testing.T) {
 	}
 
 	// Check if we got the expected number of resources
-	assert.Len(t, result.Content, expectedCount)
+	assert.Len(t, out.Results, expectedCount)
 
 	// Verify the content contains all expected resources
 	resourceMap := make(map[string]bool)
-	for _, content := range result.Content {
-		embeddedResource, ok := content.(mcp.EmbeddedResource)
+	for _, content := range out.Results {
+		embeddedResource, ok := content.(*mcp.EmbeddedResource)
 		require.True(t, ok, "Expected EmbeddedResource")
 
-		textResource, ok := embeddedResource.Resource.(mcp.TextResourceContents)
-		require.True(t, ok, "Expected TextResourceContents")
-
-		resourceMap[textResource.URI] = true
+		resourceMap[embeddedResource.Resource.URI] = true
 	}
 
 	// Check if all accounts are present
@@ -194,120 +198,106 @@ func TestConnect_Handler_Success(t *testing.T) {
 
 func TestConnect_Handler_AccountFetchFailure(t *testing.T) {
 	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
 			return nil, errors.New("failed to fetch accounts")
 		},
 	}
 
 	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
+	request := &mcp.CallToolRequest{}
+	in := tools.ConnectInput{
+		DocsProof: validProof,
 	}
-	result, err := connectTool.Handler(t.Context(), request)
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to discover resources")
 	assert.Nil(t, result)
-}
-
-func TestConnect_Handler_InvalidAccountResource(t *testing.T) {
-	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
-			// Return a non-text resource to trigger the type assertion failure
-			return []mcp.ResourceContents{
-				mcp.BlobResourceContents{
-					URI:      "firebolt://accounts/test-account",
-					MIMEType: "application/octet-stream",
-					Blob:     "binary data",
-				},
-			}, nil
-		},
-	}
-
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
-	}
-	result, err := connectTool.Handler(t.Context(), request)
-
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to convert account resource to text resource")
-	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestConnect_Handler_InvalidAccountJSON(t *testing.T) {
 	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
 			// Return invalid JSON to trigger unmarshal error
-			return []mcp.ResourceContents{
-				mcp.TextResourceContents{
-					URI:      "firebolt://accounts/test-account",
-					MIMEType: mimetype.JSON,
-					Text:     "invalid json",
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{
+					{
+						URI:      "firebolt://accounts/test-account",
+						MIMEType: mimetype.JSON,
+						Text:     "invalid json",
+					},
 				},
 			}, nil
 		},
 	}
 
 	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
+	request := &mcp.CallToolRequest{}
+	in := tools.ConnectInput{
+		DocsProof: validProof,
 	}
-	result, err := connectTool.Handler(t.Context(), request)
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to unmarshal account resource")
 	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestConnect_Handler_DatabasesFetchFailure(t *testing.T) {
 	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
-			return []mcp.ResourceContents{createAccountResource("test-account")}, nil
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{createAccountResource("test-account")},
+			}, nil
 		},
-		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error) {
+		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error) {
 			return nil, errors.New("failed to fetch databases")
 		},
 	}
 
 	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
+	request := &mcp.CallToolRequest{}
+	in := tools.ConnectInput{
+		DocsProof: validProof,
 	}
-	result, err := connectTool.Handler(t.Context(), request)
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to discover database resources")
 	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestConnect_Handler_EnginesFetchFailure(t *testing.T) {
 	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
-			return []mcp.ResourceContents{createAccountResource("test-account")}, nil
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{createAccountResource("test-account")},
+			}, nil
 		},
-		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error) {
-			return []mcp.ResourceContents{}, nil
+		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error) {
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{},
+			}, nil
 		},
-		EnginesFunc: func(ctx context.Context, accountName, engineName string) ([]mcp.ResourceContents, error) {
+		EnginesFunc: func(ctx context.Context, accountName, engineName string) (*mcp.ReadResourceResult, error) {
 			return nil, errors.New("failed to fetch engines")
 		},
 	}
 
 	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
+	request := &mcp.CallToolRequest{}
+	in := tools.ConnectInput{
+		DocsProof: validProof,
 	}
-	result, err := connectTool.Handler(t.Context(), request)
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to discover engine resources")
 	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestConnect_Handler_DisableResources(t *testing.T) {
@@ -322,26 +312,32 @@ func TestConnect_Handler_DisableResources(t *testing.T) {
 
 	// Create mock fetcher
 	mock := &MockResourceFetcher{
-		AccountsFunc: func(ctx context.Context, accountName string) ([]mcp.ResourceContents, error) {
-			var resources []mcp.ResourceContents
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
 			for _, acc := range accounts {
 				resources = append(resources, createAccountResource(acc))
 			}
-			return resources, nil
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
 		},
-		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) ([]mcp.ResourceContents, error) {
-			var resources []mcp.ResourceContents
+		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
 			for _, db := range databases[accountName] {
 				resources = append(resources, createDatabaseResource(accountName, db))
 			}
-			return resources, nil
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
 		},
-		EnginesFunc: func(ctx context.Context, accountName, engineName string) ([]mcp.ResourceContents, error) {
-			var resources []mcp.ResourceContents
+		EnginesFunc: func(ctx context.Context, accountName, engineName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
 			for _, eng := range engines[accountName] {
 				resources = append(resources, createEngineResource(accountName, eng))
 			}
-			return resources, nil
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
 		},
 	}
 
@@ -349,15 +345,16 @@ func TestConnect_Handler_DisableResources(t *testing.T) {
 	connectTool := tools.NewConnect(mock, mock, mock, validProof, true)
 
 	// Execute the handler
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"docs_proof": validProof,
+	request := &mcp.CallToolRequest{}
+	in := tools.ConnectInput{
+		DocsProof: validProof,
 	}
-	result, err := connectTool.Handler(t.Context(), request)
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
 	require.NotNil(t, result)
+	require.NotNil(t, out)
 	assert.False(t, result.IsError)
 
 	// Calculate expected total resources
@@ -370,11 +367,11 @@ func TestConnect_Handler_DisableResources(t *testing.T) {
 	}
 
 	// Check if we got the expected number of resources
-	assert.Len(t, result.Content, expectedCount)
+	assert.Len(t, out.Results, expectedCount)
 
 	// Verify the content contains text content instead of embedded resources
 	for _, content := range result.Content {
-		textContent, ok := content.(mcp.TextContent)
+		textContent, ok := content.(*mcp.TextContent)
 		require.True(t, ok, "Expected TextContent when disableResources is true")
 		assert.NotEmpty(t, textContent.Text)
 	}

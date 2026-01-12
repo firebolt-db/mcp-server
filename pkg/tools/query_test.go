@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -61,20 +61,21 @@ func TestQuery_Handler_Success(t *testing.T) {
 	queryTool := tools.NewQuery(mockPool)
 
 	// Create a request with all parameters
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"query":    "SELECT * FROM test",
-		"account":  "test-account",
-		"database": "test-db",
-		"engine":   "test-engine",
+	request := &mcp.CallToolRequest{}
+	in := tools.QueryInput{
+		Query:    "SELECT * FROM test",
+		Account:  "test-account",
+		Database: "test-db",
+		Engine:   "test-engine",
 	}
 
 	// Execute the handler
-	result, err := queryTool.Handler(t.Context(), request)
+	result, out, err := queryTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
 	require.NotNil(t, result)
+	require.NotNil(t, out)
 	assert.False(t, result.IsError)
 
 	// Check the connection was requested with the right parameters
@@ -87,7 +88,7 @@ func TestQuery_Handler_Success(t *testing.T) {
 
 	// Verify the result contains the expected JSON data
 	expectedJSON, _ := json.Marshal(mockResult)
-	assert.Equal(t, string(expectedJSON), result.Content[0].(mcp.TextContent).Text)
+	assert.Equal(t, string(expectedJSON), out.Result[0].(*mcp.TextContent).Text)
 }
 
 func TestQuery_Handler_MinimalParameters(t *testing.T) {
@@ -114,19 +115,19 @@ func TestQuery_Handler_MinimalParameters(t *testing.T) {
 	queryTool := tools.NewQuery(mockPool)
 
 	// Create a request with only required parameters
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"query":   "SHOW ENGINES",
-		"account": "test-account",
-		// No database or engine
+	request := &mcp.CallToolRequest{}
+	in := tools.QueryInput{
+		Query:   "SHOW ENGINES",
+		Account: "test-account",
 	}
 
 	// Execute the handler
-	result, err := queryTool.Handler(t.Context(), request)
+	result, out, err := queryTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
 	require.NotNil(t, result)
+	require.NotNil(t, out)
 	assert.False(t, result.IsError)
 
 	// Check the connection was requested with the right parameters
@@ -138,7 +139,7 @@ func TestQuery_Handler_MinimalParameters(t *testing.T) {
 
 	// Verify the result contains the expected JSON data
 	expectedJSON, _ := json.Marshal(mockResult)
-	assert.Equal(t, string(expectedJSON), result.Content[0].(mcp.TextContent).Text)
+	assert.Equal(t, string(expectedJSON), out.Result[0].(*mcp.TextContent).Text)
 }
 
 func TestQuery_Handler_MissingRequiredParameters(t *testing.T) {
@@ -147,36 +148,37 @@ func TestQuery_Handler_MissingRequiredParameters(t *testing.T) {
 
 	testCases := []struct {
 		name      string
-		arguments map[string]any
+		in        tools.QueryInput
 		errSubstr string
 	}{
 		{
 			name:      "missing query",
-			arguments: map[string]any{"account": "test-account"},
+			in:        tools.QueryInput{Account: "test-account"},
 			errSubstr: "query",
 		},
 		{
 			name:      "missing account",
-			arguments: map[string]any{"query": "SELECT 1"},
+			in:        tools.QueryInput{Query: "SELECT 1"},
 			errSubstr: "account",
 		},
 		{
 			name:      "empty request",
-			arguments: map[string]any{},
+			in:        tools.QueryInput{},
 			errSubstr: "bad request",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			request := mcp.CallToolRequest{}
-			request.Params.Arguments = tc.arguments
+			request := &mcp.CallToolRequest{}
+			in := tc.in
 
-			result, err := queryTool.Handler(t.Context(), request)
+			result, out, err := queryTool.Handler()(t.Context(), request, in)
 
 			assert.Error(t, err)
 			assert.Contains(t, err.Error(), tc.errSubstr)
 			assert.Nil(t, result)
+			assert.Nil(t, out)
 		})
 	}
 }
@@ -190,17 +192,18 @@ func TestQuery_Handler_ConnectionError(t *testing.T) {
 
 	queryTool := tools.NewQuery(mockPool)
 
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"query":   "SELECT 1",
-		"account": "test-account",
+	request := &mcp.CallToolRequest{}
+	in := tools.QueryInput{
+		Query:   "SELECT 1",
+		Account: "test-account",
 	}
 
-	result, err := queryTool.Handler(t.Context(), request)
+	result, out, err := queryTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to obtain database connection")
 	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestQuery_Handler_QueryError(t *testing.T) {
@@ -217,17 +220,18 @@ func TestQuery_Handler_QueryError(t *testing.T) {
 
 	queryTool := tools.NewQuery(mockPool)
 
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"query":   "SELECT * FROM nonexistent_table",
-		"account": "test-account",
+	request := &mcp.CallToolRequest{}
+	in := tools.QueryInput{
+		Query:   "SELECT * FROM nonexistent_table",
+		Account: "test-account",
 	}
 
-	result, err := queryTool.Handler(t.Context(), request)
+	result, out, err := queryTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to query database")
 	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestQuery_Handler_JSONMarshalError(t *testing.T) {
@@ -252,17 +256,18 @@ func TestQuery_Handler_JSONMarshalError(t *testing.T) {
 
 	queryTool := tools.NewQuery(mockPool)
 
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"query":   "SELECT problematic_data()",
-		"account": "test-account",
+	request := &mcp.CallToolRequest{}
+	in := tools.QueryInput{
+		Query:   "SELECT problematic_data()",
+		Account: "test-account",
 	}
 
-	result, err := queryTool.Handler(t.Context(), request)
+	result, out, err := queryTool.Handler()(t.Context(), request, in)
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to marshal query result")
 	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func ptrTo[T any](v T) *T {
