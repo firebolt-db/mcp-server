@@ -24,7 +24,7 @@ func logging(logger *slog.Logger) mcp.Middleware {
 				}
 			}
 
-			l.DebugContext(ctx, "received request")
+			l.DebugContext(ctx, "received  request")
 
 			result, err = handler(ctx, method, req)
 
