@@ -20,7 +20,6 @@ type Server interface {
 
 // Tool represents a callable tool that can be registered with the MCP server.
 // It provides methods to define the tool metadata and register it in mcp server.
-// Tool represents a callable tool that can be registered with the MCP server.
 type Tool interface {
 	// Tool returns the MCP tool definition.
 	Tool() *mcp.Tool
@@ -146,7 +145,7 @@ func (s *serverImpl) serveSSE(ctx context.Context) error {
 		return s.inner
 	}, nil)
 
-	// 2. Configure the HTTP server
+	// Configure the HTTP server
 	srv := &http.Server{
 		Addr:    s.transportSSEAddress,
 		Handler: handler,
