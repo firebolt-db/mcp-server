@@ -42,7 +42,7 @@ func (r *Accounts) ResourceTemplate() *mcp.ResourceTemplate {
 		Description: "Brief information about the account in the Firebolt organization.",
 		Annotations: &mcp.Annotations{
 			Audience: []mcp.Role{"user", "assistant"},
-			Priority: 0.59,
+			Priority: 0.9,
 		},
 	}
 }
