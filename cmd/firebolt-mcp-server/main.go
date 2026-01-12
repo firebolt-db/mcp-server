@@ -20,7 +20,9 @@ import (
 	"github.com/firebolt-db/mcp-server/pkg/prompts"
 	"github.com/firebolt-db/mcp-server/pkg/resources"
 	"github.com/firebolt-db/mcp-server/pkg/server"
-	"github.com/firebolt-db/mcp-server/pkg/tools"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
 )
 
 var (
@@ -141,9 +143,9 @@ func run(ctx context.Context, cmd *cli.Command) error {
 		cmd.String("transport"),
 		cmd.String("transport-sse-listen-address"),
 		[]server.Tool{
-			tools.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
-			tools.NewDocs(resourceDocs, disableResources),
-			tools.NewQuery(dbPool),
+			tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
+			tool_docs.NewDocs(resourceDocs, disableResources),
+			tool_query.NewQuery(dbPool),
 		},
 		[]server.Prompt{
 			prompts.NewFireboltExpert(),

@@ -1,4 +1,4 @@
-package tools_test
+package tool_connect_test
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/mimetype"
-	"github.com/firebolt-db/mcp-server/pkg/tools"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
 )
 
 const validProof = "valid_proof"
@@ -80,13 +80,13 @@ func createEngineResource(accountName, engineName string) *mcp.ResourceContents 
 
 func TestNewConnect(t *testing.T) {
 	mock := &MockResourceFetcher{}
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 	assert.NotNil(t, connectTool)
 }
 
 func TestConnect_Tool(t *testing.T) {
 	mock := &MockResourceFetcher{}
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 
 	tool := connectTool.Tool()
 	assert.Equal(t, "firebolt_connect", tool.Name)
@@ -137,11 +137,11 @@ func TestConnect_Handler_Success(t *testing.T) {
 	}
 
 	// Create the tool
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -203,9 +203,9 @@ func TestConnect_Handler_AccountFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -232,9 +232,9 @@ func TestConnect_Handler_InvalidAccountJSON(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -257,9 +257,9 @@ func TestConnect_Handler_DatabasesFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -287,9 +287,9 @@ func TestConnect_Handler_EnginesFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -342,11 +342,11 @@ func TestConnect_Handler_DisableResources(t *testing.T) {
 	}
 
 	// Create the tool with disableResources set to true
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, true)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, validProof, true)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)

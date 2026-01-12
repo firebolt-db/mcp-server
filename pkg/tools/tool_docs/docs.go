@@ -1,4 +1,4 @@
-package tools
+package tool_docs
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/itertools"
 	"github.com/firebolt-db/mcp-server/pkg/resources"
+	"github.com/firebolt-db/mcp-server/pkg/tools"
 )
 
-type DocsInput struct {
+type Input struct {
 	ArticlesIDs []string `json:"articles,omitempty" jsonschema:"Identifiers of the articles to fetch from Firebolt documentation"`
 }
 
-type DocsOutput struct {
+type Output struct {
 	Articles []mcp.Content `json:"articles"`
 }
 
@@ -51,8 +52,8 @@ func (t *Docs) Register(s *mcp.Server) {
 	mcp.AddTool(s, t.Tool(), t.Handler())
 }
 
-func (t *Docs) Handler() mcp.ToolHandlerFor[DocsInput, *DocsOutput] {
-	return func(ctx context.Context, req *mcp.CallToolRequest, input DocsInput) (*mcp.CallToolResult, *DocsOutput, error) {
+func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 
 		var results []*mcp.ResourceContents // Collection of fetched documentation resources
 
@@ -79,10 +80,10 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[DocsInput, *DocsOutput] {
 		}
 
 		out := itertools.Map(results, func(i *mcp.ResourceContents) mcp.Content {
-			return textOrResourceContent(t.disableResources, i)
+			return tools.TextOrResourceContent(t.disableResources, i)
 		})
 
-		return &mcp.CallToolResult{}, &DocsOutput{Articles: out}, nil
+		return &mcp.CallToolResult{}, &Output{Articles: out}, nil
 	}
 }
 

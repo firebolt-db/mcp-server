@@ -1,4 +1,4 @@
-package tools
+package tool_query
 
 import (
 	"context"
@@ -10,14 +10,14 @@ import (
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
 )
 
-type QueryInput struct {
+type Input struct {
 	Query    string `json:"query" jsonschema:"SQL query to execute"`
 	Account  string `json:"account" jsonschema:"Name of the Firebolt account to connect to"`
 	Database string `json:"database,omitempty" jsonschema:"Name of the database to send the query to. If not provided, no database will be specified. This still allows you to manage Firebolt organization and account metadata."`
 	Engine   string `json:"engine,omitempty" jsonschema:"Name of the engine to use for query execution. If not provided, the system engine will be used. Please note that the system engine can only be used for metadata queries and operations (DDL and DCL). Metadata queries are those that configure your Firebolt organization and account, or define the schema of your data. It will reject any queries that affect actual data stored in database."`
 }
 
-type QueryOutput struct {
+type Output struct {
 	Result []mcp.Content `json:"result"`
 }
 
@@ -60,8 +60,8 @@ func (t *Query) Register(s *mcp.Server) {
 // 2. Acquires a database connection from the pool using the specified parameters
 // 3. Executes the query against the database
 // 4. Returns the query results as JSON
-func (t *Query) Handler() mcp.ToolHandlerFor[QueryInput, *QueryOutput] {
-	return func(ctx context.Context, req *mcp.CallToolRequest, input QueryInput) (*mcp.CallToolResult, *QueryOutput, error) {
+func (t *Query) Handler() mcp.ToolHandlerFor[Input, *Output] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 		if input.Query == "" {
 			return nil, nil, fmt.Errorf("bad request: query parameter is required")
 		}
@@ -103,7 +103,7 @@ func (t *Query) Handler() mcp.ToolHandlerFor[QueryInput, *QueryOutput] {
 			return nil, nil, fmt.Errorf("failed to marshal query result: %w", err)
 		}
 
-		out := &QueryOutput{
+		out := &Output{
 			Result: []mcp.Content{
 				&mcp.TextContent{
 					Text: string(resultJSON),

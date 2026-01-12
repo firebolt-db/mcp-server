@@ -1,4 +1,4 @@
-package tools_test
+package tool_docs_test
 
 import (
 	"context"
@@ -11,18 +11,18 @@ import (
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/mimetype"
 	"github.com/firebolt-db/mcp-server/pkg/resources"
-	"github.com/firebolt-db/mcp-server/pkg/tools"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs"
 )
 
 func TestNewDocs(t *testing.T) {
 	mock := &MockDocsFetcher{}
-	docsTool := tools.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false)
 	assert.NotNil(t, docsTool)
 }
 
 func TestDocs_Tool(t *testing.T) {
 	mock := &MockDocsFetcher{}
-	docsTool := tools.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false)
 
 	tool := docsTool.Tool()
 	assert.Equal(t, "firebolt_docs", tool.Name)
@@ -50,14 +50,14 @@ func TestDocs_Handler_SpecificArticles(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false)
 
 	// Execute the handler with specific articles
 	request := &mcp.CallToolRequest{}
 	// request.Params.Arguments = map[string]any{
 	// 	"articles": []any{"article1", "article2"},
 	// }
-	in := tools.DocsInput{ArticlesIDs: []string{"article1", "article2"}}
+	in := tool_docs.Input{ArticlesIDs: []string{"article1", "article2"}}
 	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
@@ -94,11 +94,11 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tools.DocsInput{
+	in := tool_docs.Input{
 		ArticlesIDs: []string{},
 	}
 	result, out, err := docsTool.Handler()(t.Context(), request, in)
@@ -127,11 +127,11 @@ func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tools.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tools.DocsInput{
+	in := tool_docs.Input{
 		ArticlesIDs: []string{"multi-resource"},
 	}
 	result, out, err := docsTool.Handler()(t.Context(), request, in)
@@ -180,11 +180,11 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 	}
 
 	// Create the tool with disableResources set to true
-	docsTool := tools.NewDocs(mock, true)
+	docsTool := tool_docs.NewDocs(mock, true)
 
 	// Execute the handler with empty request (should return default articles)
 	request := &mcp.CallToolRequest{}
-	in := tools.DocsInput{
+	in := tool_docs.Input{
 		ArticlesIDs: []string{},
 	}
 	result, out, err := docsTool.Handler()(t.Context(), request, in)

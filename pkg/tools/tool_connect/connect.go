@@ -1,4 +1,4 @@
-package tools
+package tool_connect
 
 import (
 	"context"
@@ -10,13 +10,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/itertools"
+	"github.com/firebolt-db/mcp-server/pkg/tools"
 )
 
-type ConnectInput struct {
+type Input struct {
 	DocsProof string `json:"docs_proof" jsonschema:"This parameter is used to confirm that the essential documentation has been reviewed before connecting to Firebolt. The correct value will be returned by the 'firebolt_docs' tool when it is called without any parameters."`
 }
 
-type ConnectOutput struct {
+type Output struct {
 	Results []mcp.Content `json:"results"`
 }
 
@@ -91,8 +92,8 @@ func (t *Connect) Register(s *mcp.Server) {
 // Handler processes tool invocation requests and returns a comprehensive view of
 // Firebolt resources. It fetches accounts and then concurrently retrieves the
 // databases and engines for each account.
-func (t *Connect) Handler() mcp.ToolHandlerFor[ConnectInput, *ConnectOutput] {
-	return func(ctx context.Context, req *mcp.CallToolRequest, input ConnectInput) (*mcp.CallToolResult, *ConnectOutput, error) {
+func (t *Connect) Handler() mcp.ToolHandlerFor[Input, *Output] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 		if input.DocsProof != t.docsProof {
 			return nil, nil, fmt.Errorf("invalid documentation proof, " +
 				"you need to call `firebolt_docs` tool first and extract value from this parameter from the response")
@@ -171,10 +172,10 @@ func (t *Connect) Handler() mcp.ToolHandlerFor[ConnectInput, *ConnectOutput] {
 		<-done
 
 		out := itertools.Map(results, func(i *mcp.ResourceContents) mcp.Content {
-			return textOrResourceContent(t.disableResources, i)
+			return tools.TextOrResourceContent(t.disableResources, i)
 		})
 
-		return &mcp.CallToolResult{}, &ConnectOutput{Results: out}, nil
+		return &mcp.CallToolResult{}, &Output{Results: out}, nil
 	}
 }
 

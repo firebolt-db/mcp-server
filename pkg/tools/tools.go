@@ -4,8 +4,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// textOrResourceContent returns a text content if disableResources is true, otherwise returns an embedded resource.
-func textOrResourceContent(disableResources bool, i *mcp.ResourceContents) mcp.Content {
+// TextOrResourceContent returns a text content if disableResources is true, otherwise returns an embedded resource.
+func TextOrResourceContent(disableResources bool, i *mcp.ResourceContents) mcp.Content {
 	if disableResources {
 		return &mcp.TextContent{
 			Text: i.Text,
