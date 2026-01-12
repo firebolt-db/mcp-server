@@ -7,7 +7,7 @@ import (
 	"io/fs"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/args"
 	"github.com/firebolt-db/mcp-server/pkg/helpers/mimetype"
@@ -56,22 +56,24 @@ func NewDocs(docsFS DocsFS, proofSecret string) *Docs {
 
 // ResourceTemplate defines the template for documentation resources.
 // It specifies the URI format, content type, description, and suggested usage.
-func (r *Docs) ResourceTemplate() mcp.ResourceTemplate {
-	return mcp.NewResourceTemplate(
-		DocsURI("{article}"),
-		"Documentation article",
-		mcp.WithTemplateMIMEType(mimetype.Markdown),
-		mcp.WithTemplateDescription("An article that offers insights into a particular topic related to Firebolt."),
-		mcp.WithTemplateAnnotations([]mcp.Role{mcp.RoleUser, mcp.RoleAssistant}, 0.5),
-	)
+func (r *Docs) ResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
+		URITemplate: DocsURI("{article}"),
+		Name:        "Documentation article",
+		MIMEType:    mimetype.Markdown,
+		Description: "An article that offers insights into a particular topic related to Firebolt.",
+		Annotations: &mcp.Annotations{
+			Audience: []mcp.Role{"user", "assistant"},
+			Priority: 0.5,
+		},
+	}
 }
 
 // Handler processes resource requests for documentation articles.
 // It extracts the article parameter and fetches the appropriate documentation content.
-func (r *Docs) Handler(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-
+func (r *Docs) Handler(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 	// Extract the article name from the request parameters
-	value, err := args.String(request.Params.Arguments, "article")
+	value, err := args.String(request.GetParams().GetMeta(), "article")
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -81,19 +83,19 @@ func (r *Docs) Handler(ctx context.Context, request mcp.ReadResourceRequest) ([]
 
 // FetchDocsResources retrieves the content for a specified documentation article.
 // It handles special articles (overview, reference) and regular documentation files.
-func (r *Docs) FetchDocsResources(_ context.Context, article string) ([]mcp.ResourceContents, error) {
+func (r *Docs) FetchDocsResources(_ context.Context, article string) (*mcp.ReadResourceResult, error) {
 
 	switch article {
 
 	case DocsArticleOverview:
 
 		// Return the pre-embedded overview markdown content
-		return r.newResource(article, docsOverviewMD)
+		return r.newReadResourceResult(article, docsOverviewMD)
 
 	case DocsArticleProof:
 
 		// Return the pre-embedded proof markdown content
-		return r.newResource(article, fmt.Sprintf(docsProofMD, r.proofSecret))
+		return r.newReadResourceResult(article, fmt.Sprintf(docsProofMD, r.proofSecret))
 
 	case DocsArticleReference:
 
@@ -113,7 +115,7 @@ func (r *Docs) FetchDocsResources(_ context.Context, article string) ([]mcp.Reso
 		}
 
 		// Combine the reference template with the generated file list
-		return r.newResource(article, docsReferenceMD+b.String())
+		return r.newReadResourceResult(article, docsReferenceMD+b.String())
 
 	default:
 
@@ -128,15 +130,19 @@ func (r *Docs) FetchDocsResources(_ context.Context, article string) ([]mcp.Reso
 			return nil, fmt.Errorf("failed to read file %s: %w", article, err)
 		}
 
-		return r.newResource(article, string(fileData))
+		return r.newReadResourceResult(article, string(fileData))
 	}
 }
 
 // newResource creates a properly formatted resource contents object for a documentation article.
-func (r *Docs) newResource(article, content string) ([]mcp.ResourceContents, error) {
-	return []mcp.ResourceContents{&mcp.TextResourceContents{
-		URI:      DocsURI(article),
-		MIMEType: mimetype.Markdown,
-		Text:     content,
-	}}, nil
+func (r *Docs) newReadResourceResult(article, content string) (*mcp.ReadResourceResult, error) {
+	return &mcp.ReadResourceResult{
+		Contents: []*mcp.ResourceContents{
+			{
+				URI:      DocsURI(article),
+				MIMEType: mimetype.Markdown,
+				Text:     content,
+			},
+		},
+	}, nil
 }

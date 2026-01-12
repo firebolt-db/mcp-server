@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/neilotoole/slogt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,24 +23,24 @@ func TestNewServer(t *testing.T) {
 
 	// Setup mocks
 	mockTool1 := new(mockTool)
-	mockTool1.On("Tool").Return(mcp.Tool{
+	mockTool1.On("Tool").Return(&mcp.Tool{
 		Name:        "testTool1",
 		Description: "Test tool 1",
 	})
 
 	mockPrompt1 := new(mockPrompt)
-	mockPrompt1.On("Prompt").Return(mcp.Prompt{
+	mockPrompt1.On("Prompt").Return(&mcp.Prompt{
 		Name:        "testPrompt1",
 		Description: "Test prompt 1",
 	})
 
 	mockResource1 := new(mockResourceTemplate)
 	mockResource1.On("ResourceTemplate").Return(
-		mcp.NewResourceTemplate(
-			"test",
-			"testResource1",
-			mcp.WithTemplateDescription("Test resource 1"),
-		),
+		&mcp.ResourceTemplate{
+			URITemplate: "test",
+			Name:        "testResource1",
+			Description: "Test resource 1",
+		},
 	)
 
 	// Create server
@@ -81,9 +81,9 @@ type mockTool struct {
 	mock.Mock
 }
 
-func (m *mockTool) Tool() mcp.Tool {
+func (m *mockTool) Tool() *mcp.Tool {
 	args := m.Called()
-	return args.Get(0).(mcp.Tool)
+	return args.Get(0).(*mcp.Tool)
 }
 
 func (m *mockTool) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -94,17 +94,22 @@ func (m *mockTool) Handler(ctx context.Context, request mcp.CallToolRequest) (*m
 	return args.Get(0).(*mcp.CallToolResult), args.Error(1)
 }
 
+func (m *mockTool) Register(s *mcp.Server) {
+	// call Tool
+	_ = m.Tool()
+}
+
 // mockPrompt is a mock implementation of the Prompt interface for testing.
 type mockPrompt struct {
 	mock.Mock
 }
 
-func (m *mockPrompt) Prompt() mcp.Prompt {
+func (m *mockPrompt) Prompt() *mcp.Prompt {
 	args := m.Called()
-	return args.Get(0).(mcp.Prompt)
+	return args.Get(0).(*mcp.Prompt)
 }
 
-func (m *mockPrompt) Handler(ctx context.Context, request mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+func (m *mockPrompt) Handler(ctx context.Context, request *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 	args := m.Called(ctx, request)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -117,15 +122,15 @@ type mockResourceTemplate struct {
 	mock.Mock
 }
 
-func (m *mockResourceTemplate) ResourceTemplate() mcp.ResourceTemplate {
+func (m *mockResourceTemplate) ResourceTemplate() *mcp.ResourceTemplate {
 	args := m.Called()
-	return args.Get(0).(mcp.ResourceTemplate)
+	return args.Get(0).(*mcp.ResourceTemplate)
 }
 
-func (m *mockResourceTemplate) Handler(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+func (m *mockResourceTemplate) Handler(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 	args := m.Called(ctx, request)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]mcp.ResourceContents), args.Error(1)
+	return args.Get(0).(*mcp.ReadResourceResult), args.Error(1)
 }

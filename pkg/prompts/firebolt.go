@@ -4,7 +4,7 @@ import (
 	"context"
 	_ "embed"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 //go:embed firebolt.md
@@ -19,20 +19,25 @@ func NewFireboltExpert() *FireboltExpert {
 	return &FireboltExpert{}
 }
 
-func (p *FireboltExpert) Prompt() mcp.Prompt {
-	return mcp.NewPrompt(
-		"Firebolt Expert",
-		mcp.WithPromptDescription(fireboltPromptDescription),
-	)
+func (p *FireboltExpert) Prompt() *mcp.Prompt {
+	return &mcp.Prompt{
+		Name:        "Firebolt Expert",
+		Description: fireboltPromptDescription,
+	}
 }
 
-func (p *FireboltExpert) Handler(_ context.Context, _ mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+func (p *FireboltExpert) Handler(_ context.Context, _ *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
 
-	var messages []mcp.PromptMessage
-	messages = append(messages, mcp.NewPromptMessage(
-		mcp.RoleAssistant,
-		mcp.NewTextContent(fireboltMD),
-	))
+	var messages []*mcp.PromptMessage
+	messages = append(messages, &mcp.PromptMessage{
+		Role: "assistant",
+		Content: &mcp.TextContent{
+			Text: fireboltMD,
+		},
+	})
 
-	return mcp.NewGetPromptResult(fireboltPromptDescription, messages), nil
+	return &mcp.GetPromptResult{
+		Description: fireboltPromptDescription,
+		Messages:    messages,
+	}, nil
 }

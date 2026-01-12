@@ -4,18 +4,26 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/itertools"
 	"github.com/firebolt-db/mcp-server/pkg/resources"
 )
+
+type DocsInput struct {
+	ArticlesIDs []string `json:"articles,omitempty" jsonschema:"Identifiers of the articles to fetch from Firebolt documentation"`
+}
+
+type DocsOutput struct {
+	Articles []mcp.Content `json:"articles"`
+}
 
 // DocsResourcesFetcher defines the interface for retrieving documentation resources.
 // Implementations should provide methods to fetch Firebolt documentation.
 type DocsResourcesFetcher interface {
 	// FetchDocsResources retrieves documentation content for a specified article.
 	// If article is empty, the implementation should determine an appropriate default behavior.
-	FetchDocsResources(_ context.Context, article string) ([]mcp.ResourceContents, error)
+	FetchDocsResources(_ context.Context, article string) (*mcp.ReadResourceResult, error)
 }
 
 // Docs represents a tool for fetching and returning Firebolt documentation.
@@ -25,6 +33,59 @@ type Docs struct {
 	disableResources bool                 // Return text content instead of embedded resources
 }
 
+func (t *Docs) Tool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:  "firebolt_docs",
+		Title: "Firebolt Documentation",
+		Description: "Returns Firebolt documentation articles. " +
+			"Use this tool whenever you asked a question about Firebolt or need to connect to and use Firebolt. " +
+			"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. " +
+			"Calling this tool without any parameters will return an overview document containing essential Firebolt fundamentals, " +
+			"an index of detailed documentation articles, and a secret value expected by `firebolt_connect` tool that confirms you have read the documentation. " +
+			"To retrieve specific articles, call this tool with their corresponding IDs using the `articles` parameter.",
+	}
+}
+
+// Register adds the Docs tool to the provided MCP server instance.
+func (t *Docs) Register(s *mcp.Server) {
+	mcp.AddTool(s, t.Tool(), t.Handler())
+}
+
+func (t *Docs) Handler() mcp.ToolHandlerFor[DocsInput, *DocsOutput] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, input DocsInput) (*mcp.CallToolResult, *DocsOutput, error) {
+
+		var results []*mcp.ResourceContents // Collection of fetched documentation resources
+
+		articleIDs := input.ArticlesIDs
+
+		// Default articles to return if none specified
+		if len(articleIDs) == 0 {
+			articleIDs = append(
+				articleIDs,
+				resources.DocsArticleOverview,  // General Firebolt overview
+				resources.DocsArticleProof,     // Contains proof value for connect tool
+				resources.DocsArticleReference, // Reference documentation
+			)
+		}
+
+		// Fetch each requested article
+		for _, value := range articleIDs {
+			// Fetch the article resources
+			articleResources, err := t.docsFetcher.FetchDocsResources(ctx, value)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to discover resources: %w", err)
+			}
+			results = append(results, articleResources.Contents...)
+		}
+
+		out := itertools.Map(results, func(i *mcp.ResourceContents) mcp.Content {
+			return textOrResourceContent(t.disableResources, i)
+		})
+
+		return &mcp.CallToolResult{}, &DocsOutput{Articles: out}, nil
+	}
+}
+
 // NewDocs creates a new instance of the Docs tool with the provided documentation fetcher.
 // It requires an implementation for fetching documentation articles.
 func NewDocs(docsFetcher DocsResourcesFetcher, disableResources bool) *Docs {
@@ -32,83 +93,4 @@ func NewDocs(docsFetcher DocsResourcesFetcher, disableResources bool) *Docs {
 		docsFetcher:      docsFetcher,
 		disableResources: disableResources,
 	}
-}
-
-// Tool returns the mcp.Tool definition for the Docs tool.
-// This defines how the tool is represented in the MCP system, including its name, description,
-// and parameters it accepts.
-func (t *Docs) Tool() mcp.Tool {
-	return mcp.NewTool(
-		"firebolt_docs",
-		mcp.WithDescription(
-			"Returns Firebolt documentation articles. "+
-				"Use this tool whenever you asked a question about Firebolt or need to connect to and use Firebolt. "+
-				"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. "+
-				"Calling this tool without any parameters will return an overview document containing essential Firebolt fundamentals, "+
-				"an index of detailed documentation articles, and a secret value expected by `firebolt_connect` tool that confirms you have read the documentation. "+
-				"To retrieve specific articles, call this tool with their corresponding IDs using the `articles` parameter.",
-		),
-		mcp.WithArray(
-			"articles",
-			mcp.Title("Article IDs"),
-			mcp.Description("Identifiers of the articles to fetch from Firebolt documentation"),
-			mcp.MinItems(1),
-			mcp.Items(map[string]any{
-				"type": "string",
-			}),
-		),
-	)
-}
-
-// Handler processes tool invocation requests and returns Firebolt documentation articles.
-// If no specific articles are requested, it returns a set of default articles including an overview,
-// a proof of documentation reading (needed for the connect tool), and a reference article.
-// If specific articles are requested via the "articles" parameter, it fetches and returns those.
-func (t *Docs) Handler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-
-	var (
-		articleIDs []any                  // List of article IDs to fetch
-		results    []mcp.ResourceContents // Collection of fetched documentation resources
-	)
-
-	// Extract article IDs from request parameters if provided
-	val, ok := request.GetArguments()["articles"]
-	if ok && val != nil {
-		articleIDs = val.([]any)
-	}
-
-	// Default articles to return if none specified
-	if len(articleIDs) == 0 {
-		articleIDs = append(
-			articleIDs,
-			resources.DocsArticleOverview,  // General Firebolt overview
-			resources.DocsArticleProof,     // Contains proof value for connect tool
-			resources.DocsArticleReference, // Reference documentation
-		)
-	}
-
-	// Fetch each requested article
-	for _, value := range articleIDs {
-		// Ensure value is a string
-		strValue, ok := value.(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid type for article ID: %T", value)
-		}
-
-		// Fetch the article resources
-		articleResources, err := t.docsFetcher.FetchDocsResources(ctx, strValue)
-		if err != nil {
-			return nil, fmt.Errorf("failed to discover resources: %w", err)
-		}
-		results = append(results, articleResources...)
-	}
-
-	// Return the results as embedded resources
-	return &mcp.CallToolResult{
-		Result: mcp.Result{},
-		Content: itertools.Map(results, func(i mcp.ResourceContents) mcp.Content {
-			return textOrResourceContent(t.disableResources, i)
-		}),
-		IsError: false,
-	}, nil
 }

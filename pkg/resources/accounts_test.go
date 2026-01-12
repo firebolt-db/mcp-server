@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -96,7 +96,7 @@ func TestAccounts_Handler(t *testing.T) {
 			},
 		},
 		{
-			name:   "missing account parameter",
+			name: "missing account parameter",
 			params: map[string]any{
 				// No account parameter
 			},
@@ -126,8 +126,11 @@ func TestAccounts_Handler(t *testing.T) {
 
 			accounts := resources.NewAccounts(client)
 
-			request := mcp.ReadResourceRequest{}
-			request.Params.Arguments = tt.params
+			request := &mcp.ReadResourceRequest{
+				Params: &mcp.ReadResourceParams{
+					Meta: tt.params,
+				},
+			}
 
 			result, err := accounts.Handler(t.Context(), request)
 
@@ -138,19 +141,17 @@ func TestAccounts_Handler(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Len(t, result, len(tt.expected))
+			require.Len(t, result.Contents, len(tt.expected))
 
-			for i, res := range result {
-				textRes, ok := res.(mcp.TextResourceContents)
-				require.True(t, ok, "Expected TextResourceContents")
+			for i, res := range result.Contents {
 
 				var data discovery.Account
-				err := json.Unmarshal([]byte(textRes.Text), &data)
+				err := json.Unmarshal([]byte(res.Text), &data)
 				require.NoError(t, err)
 
 				assert.Equal(t, tt.expected[i], data)
-				assert.Equal(t, resources.AccountURI(data.Name), textRes.URI)
-				assert.Equal(t, mimetype.JSON, textRes.MIMEType)
+				assert.Equal(t, resources.AccountURI(data.Name), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
 			}
 
 			assert.Equal(t, 1, client.ListAccountsCount, "ListAccounts should be called exactly once")
@@ -277,19 +278,16 @@ func TestAccounts_FetchAccountResources(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Len(t, result, len(tt.expected))
+			require.Len(t, result.Contents, len(tt.expected))
 
-			for i, res := range result {
-				textRes, ok := res.(mcp.TextResourceContents)
-				require.True(t, ok, "Expected TextResourceContents")
-
+			for i, res := range result.Contents {
 				var data discovery.Account
-				err := json.Unmarshal([]byte(textRes.Text), &data)
+				err := json.Unmarshal([]byte(res.Text), &data)
 				require.NoError(t, err)
 
 				assert.Equal(t, tt.expected[i], data)
-				assert.Equal(t, resources.AccountURI(data.Name), textRes.URI)
-				assert.Equal(t, mimetype.JSON, textRes.MIMEType)
+				assert.Equal(t, resources.AccountURI(data.Name), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
 			}
 
 			assert.Equal(t, 1, client.ListAccountsCount, "ListAccounts should be called exactly once")

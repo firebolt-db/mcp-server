@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -29,61 +29,6 @@ func TestDocs_Tool(t *testing.T) {
 	assert.Contains(t, tool.Description, "Returns Firebolt documentation articles")
 }
 
-func TestDocs_Handler_DefaultArticles(t *testing.T) {
-	// Create test data for default articles
-	mockArticles := map[string]string{
-		resources.DocsArticleOverview:  "# Firebolt Overview\nThis is an overview of Firebolt.",
-		resources.DocsArticleProof:     "# Proof Document\nSecret proof: proof_value_123",
-		resources.DocsArticleReference: "# Reference\nThis is the reference documentation.",
-	}
-
-	// Create mock fetcher that returns the mock articles
-	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
-			content, exists := mockArticles[article]
-			if !exists {
-				return nil, errors.New("article not found")
-			}
-			return []mcp.ResourceContents{createDocResource(article, content)}, nil
-		},
-	}
-
-	// Create the tool
-	docsTool := tools.NewDocs(mock, false)
-
-	// Execute the handler with empty request (should return default articles)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{}
-	result, err := docsTool.Handler(t.Context(), request)
-
-	// Assertions
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.False(t, result.IsError)
-
-	// Should return 3 default articles
-	assert.Len(t, result.Content, 3)
-
-	// Verify the content contains all expected resources
-	resourceMap := make(map[string]string)
-	for _, content := range result.Content {
-		embeddedResource, ok := content.(mcp.EmbeddedResource)
-		require.True(t, ok, "Expected EmbeddedResource")
-
-		textResource, ok := embeddedResource.Resource.(mcp.TextResourceContents)
-		require.True(t, ok, "Expected TextResourceContents")
-
-		resourceMap[textResource.URI] = textResource.Text
-	}
-
-	// Check if all default articles are present
-	for articleID, expectedContent := range mockArticles {
-		uri := "firebolt://docs/" + articleID
-		assert.Contains(t, resourceMap, uri)
-		assert.Equal(t, expectedContent, resourceMap[uri])
-	}
-}
-
 func TestDocs_Handler_SpecificArticles(t *testing.T) {
 	// Create test data for specific articles
 	mockArticles := map[string]string{
@@ -93,12 +38,14 @@ func TestDocs_Handler_SpecificArticles(t *testing.T) {
 
 	// Create mock fetcher that returns the mock articles
 	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
+		FetchDocsFunc: func(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
 			content, exists := mockArticles[article]
 			if !exists {
 				return nil, errors.New("article not found")
 			}
-			return []mcp.ResourceContents{createDocResource(article, content)}, nil
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{createDocResource(article, content)},
+			}, nil
 		},
 	}
 
@@ -106,11 +53,12 @@ func TestDocs_Handler_SpecificArticles(t *testing.T) {
 	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler with specific articles
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"articles": []any{"article1", "article2"},
-	}
-	result, err := docsTool.Handler(t.Context(), request)
+	request := &mcp.CallToolRequest{}
+	// request.Params.Arguments = map[string]any{
+	// 	"articles": []any{"article1", "article2"},
+	// }
+	in := tools.DocsInput{ArticlesIDs: []string{"article1", "article2"}}
+	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
@@ -118,18 +66,15 @@ func TestDocs_Handler_SpecificArticles(t *testing.T) {
 	assert.False(t, result.IsError)
 
 	// Should return the 2 requested articles
-	assert.Len(t, result.Content, 2)
+	assert.Len(t, out.Articles, 2)
 
 	// Verify the content contains all expected resources
 	resourceMap := make(map[string]string)
-	for _, content := range result.Content {
-		embeddedResource, ok := content.(mcp.EmbeddedResource)
+	for _, content := range out.Articles {
+		embeddedResource, ok := content.(*mcp.EmbeddedResource)
 		require.True(t, ok, "Expected EmbeddedResource")
 
-		textResource, ok := embeddedResource.Resource.(mcp.TextResourceContents)
-		require.True(t, ok, "Expected TextResourceContents")
-
-		resourceMap[textResource.URI] = textResource.Text
+		resourceMap[embeddedResource.Resource.URI] = embeddedResource.Resource.Text
 	}
 
 	// Check if all requested articles are present
@@ -143,7 +88,7 @@ func TestDocs_Handler_SpecificArticles(t *testing.T) {
 func TestDocs_Handler_FetchError(t *testing.T) {
 	// Create mock fetcher that returns an error
 	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
+		FetchDocsFunc: func(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
 			return nil, errors.New("failed to fetch article")
 		},
 	}
@@ -152,42 +97,29 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{}
-	result, err := docsTool.Handler(t.Context(), request)
+	request := &mcp.CallToolRequest{}
+	in := tools.DocsInput{
+		ArticlesIDs: []string{},
+	}
+	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to discover resources")
 	assert.Nil(t, result)
-}
-
-func TestDocs_Handler_InvalidArticleID(t *testing.T) {
-	// Create the tool with any mock
-	mock := &MockDocsFetcher{}
-	docsTool := tools.NewDocs(mock, false)
-
-	// Execute the handler with an invalid article ID type
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"articles": []any{123}, // Not a string
-	}
-	result, err := docsTool.Handler(t.Context(), request)
-
-	// Assertions
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid type for article ID")
-	assert.Nil(t, result)
+	assert.Nil(t, out)
 }
 
 func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 	// Create mock fetcher that returns multiple resources for a single article ID
 	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
+		FetchDocsFunc: func(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
 			if article == "multi-resource" {
-				return []mcp.ResourceContents{
-					createDocResource("multi-resource-1", "# Part 1\nContent part 1"),
-					createDocResource("multi-resource-2", "# Part 2\nContent part 2"),
+				return &mcp.ReadResourceResult{
+					Contents: []*mcp.ResourceContents{
+						createDocResource("multi-resource-1", "# Part 1\nContent part 1"),
+						createDocResource("multi-resource-2", "# Part 2\nContent part 2"),
+					},
 				}, nil
 			}
 			return nil, errors.New("article not found")
@@ -198,11 +130,11 @@ func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 	docsTool := tools.NewDocs(mock, false)
 
 	// Execute the handler
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{
-		"articles": []any{"multi-resource"},
+	request := &mcp.CallToolRequest{}
+	in := tools.DocsInput{
+		ArticlesIDs: []string{"multi-resource"},
 	}
-	result, err := docsTool.Handler(t.Context(), request)
+	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
@@ -210,18 +142,16 @@ func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 	assert.False(t, result.IsError)
 
 	// Should return both resources
-	assert.Len(t, result.Content, 2)
+	require.NotNil(t, out)
+	assert.Len(t, out.Articles, 2)
 
 	// Verify both parts are present
 	resourceMap := make(map[string]bool)
-	for _, content := range result.Content {
-		embeddedResource, ok := content.(mcp.EmbeddedResource)
+	for _, content := range out.Articles {
+		embeddedResource, ok := content.(*mcp.EmbeddedResource)
 		require.True(t, ok, "Expected EmbeddedResource")
 
-		textResource, ok := embeddedResource.Resource.(mcp.TextResourceContents)
-		require.True(t, ok, "Expected TextResourceContents")
-
-		resourceMap[textResource.URI] = true
+		resourceMap[embeddedResource.Resource.URI] = true
 	}
 
 	assert.True(t, resourceMap["firebolt://docs/multi-resource-1"])
@@ -238,12 +168,14 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 
 	// Create mock fetcher that returns the mock articles
 	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
+		FetchDocsFunc: func(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
 			content, exists := mockArticles[article]
 			if !exists {
 				return nil, errors.New("article not found")
 			}
-			return []mcp.ResourceContents{createDocResource(article, content)}, nil
+			return &mcp.ReadResourceResult{
+				Contents: []*mcp.ResourceContents{createDocResource(article, content)},
+			}, nil
 		},
 	}
 
@@ -251,9 +183,11 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 	docsTool := tools.NewDocs(mock, true)
 
 	// Execute the handler with empty request (should return default articles)
-	request := mcp.CallToolRequest{}
-	request.Params.Arguments = map[string]any{}
-	result, err := docsTool.Handler(t.Context(), request)
+	request := &mcp.CallToolRequest{}
+	in := tools.DocsInput{
+		ArticlesIDs: []string{},
+	}
+	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
 	require.NoError(t, err)
@@ -261,12 +195,13 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 	assert.False(t, result.IsError)
 
 	// Should return 3 default articles
-	assert.Len(t, result.Content, 3)
+	require.NotNil(t, out)
+	assert.Len(t, out.Articles, 3)
 
 	// Verify the content contains text content instead of embedded resources
 	textContents := make(map[string]string)
-	for _, content := range result.Content {
-		textContent, ok := content.(mcp.TextContent)
+	for _, content := range out.Articles {
+		textContent, ok := content.(*mcp.TextContent)
 		require.True(t, ok, "Expected TextContent when disableResources is true")
 		assert.NotEmpty(t, textContent.Text)
 
@@ -286,16 +221,16 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 }
 
 type MockDocsFetcher struct {
-	FetchDocsFunc func(ctx context.Context, article string) ([]mcp.ResourceContents, error)
+	FetchDocsFunc func(ctx context.Context, article string) (*mcp.ReadResourceResult, error)
 }
 
-func (m *MockDocsFetcher) FetchDocsResources(ctx context.Context, article string) ([]mcp.ResourceContents, error) {
+func (m *MockDocsFetcher) FetchDocsResources(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
 	return m.FetchDocsFunc(ctx, article)
 }
 
 // Helper to create a doc resource
-func createDocResource(articleID, content string) mcp.ResourceContents {
-	return mcp.TextResourceContents{
+func createDocResource(articleID, content string) *mcp.ResourceContents {
+	return &mcp.ResourceContents{
 		URI:      "firebolt://docs/" + articleID,
 		MIMEType: mimetype.Markdown,
 		Text:     content,

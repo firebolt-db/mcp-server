@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
 	"github.com/firebolt-db/mcp-server/pkg/helpers/args"
@@ -32,21 +32,24 @@ func NewEngines(dbPool database.Pool) *Engines {
 
 // ResourceTemplate defines the template for engine resources.
 // It specifies the URI format, content type, description, and suggested usage.
-func (r *Engines) ResourceTemplate() mcp.ResourceTemplate {
-	return mcp.NewResourceTemplate(
-		EngineURI("{account}", "{engine}"),
-		"Engine",
-		mcp.WithTemplateMIMEType(mimetype.JSON),
-		mcp.WithTemplateAnnotations([]mcp.Role{mcp.RoleUser, mcp.RoleAssistant}, 0.8),
-		mcp.WithTemplateDescription("Brief information about the engine in the Firebolt account."),
-	)
+func (r *Engines) ResourceTemplate() *mcp.ResourceTemplate {
+	return &mcp.ResourceTemplate{
+		URITemplate: EngineURI("{account}", "{engine}"),
+		Name:        "Engine",
+		MIMEType:    mimetype.JSON,
+		Description: "Brief information about the engine in the Firebolt account.",
+		Annotations: &mcp.Annotations{
+			Audience: []mcp.Role{"user", "assistant"},
+			Priority: 0.8,
+		},
+	}
 }
 
 // Handler processes resource requests for engine information.
 // It extracts account and engine parameters and fetches the appropriate engine data.
-func (r *Engines) Handler(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
+func (r *Engines) Handler(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 
-	params, err := args.Strings(request.Params.Arguments, "account", "engine")
+	params, err := args.Strings(request.GetParams().GetMeta(), "account", "engine")
 	if err != nil {
 		return nil, fmt.Errorf("bad request: %w", err)
 	}
@@ -56,7 +59,7 @@ func (r *Engines) Handler(ctx context.Context, request mcp.ReadResourceRequest) 
 
 // FetchEngineResources retrieves engine information from the database.
 // If a specific engine is specified, it filters for that engine; otherwise, it returns all engines.
-func (r *Engines) FetchEngineResources(ctx context.Context, account, engine string) ([]mcp.ResourceContents, error) {
+func (r *Engines) FetchEngineResources(ctx context.Context, account, engine string) (*mcp.ReadResourceResult, error) {
 
 	// Acquire a connection to the database
 	conn, err := r.dbPool.GetConnection(database.PoolParams{
@@ -83,18 +86,25 @@ func (r *Engines) FetchEngineResources(ctx context.Context, account, engine stri
 	}
 
 	// Convert rows to resources
-	return itertools.MapWithFailure(rows, func(i map[string]any) (mcp.ResourceContents, error) {
+	out, err := itertools.MapWithFailure(rows, func(i map[string]any) (*mcp.ResourceContents, error) {
 
 		i["account_name"] = account
 		data, err := json.Marshal(i)
 		if err != nil {
-			return mcp.TextResourceContents{}, fmt.Errorf("failed to marshal row data to JSON: %w", err)
+			return nil, fmt.Errorf("failed to marshal row data to JSON: %w", err)
 		}
 
-		return mcp.TextResourceContents{
+		return &mcp.ResourceContents{
 			URI:      EngineURI(account, i["engine_name"].(string)),
 			MIMEType: mimetype.JSON,
 			Text:     string(data),
 		}, nil
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcp.ReadResourceResult{
+		Contents: out,
+	}, nil
 }
