@@ -97,6 +97,13 @@ func main() {
 				Usage:    "Firebolt environment to connect to",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_ENVIRONMENT"),
 			},
+			&cli.BoolFlag{
+				Name:     "require-docs-proof",
+				Category: "MCP Tools Configuration",
+				Value:    false,
+				Usage:    "Require LLM to provide a token as a proof it has reviewed documentation overview",
+				Sources:  cli.EnvVars("FIREBOLT_MCP_REQUIRE_DOCS_PROOF"),
+			},
 		},
 		Action: run,
 	}
@@ -132,9 +139,9 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Initialize MCP server
-	docsProof := generateRandomSecret()
+	docsProofToken := generateRandomSecret()
 	disableResources := cmd.Bool("disable-resources")
-	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProof)
+	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
 	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceDatabases := resources.NewDatabases(dbPool)
 	resourceEngines := resources.NewEngines(dbPool)
@@ -149,6 +156,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	searchTool, err := tool_search.NewSearch(ctx, searchCfg)
 	if err != nil {
 		return fmt.Errorf("failed to create search tool: %w", err)
+	}
+
+	var docsProof *string
+	if cmd.Bool("require-docs-proof") {
+		docsProof = &docsProofToken
 	}
 
 	srv := server.NewServer(

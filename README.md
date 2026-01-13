@@ -173,12 +173,13 @@ Optionally, you can specify the address the server should listen on by setting t
 Firebolt MCP Server implements the [Model Context Protocol](https://modelcontextprotocol.io/introduction), providing:
 
 1. **Tools** - Task-specific capabilities provided to the LLM:
-    - `firebolt_docs`: Access Firebolt documentation
+    - `firebolt_docs`: Access basic Firebolt documentation overview
     - `firebolt_connect`: Establish connections to Firebolt engines and databases
     - `firebolt_query`: Execute SQL queries against Firebolt
+    - `firebolt_search`: Search Firebolt documentation for any details
 
 2. **Resources** - Data that can be referenced by the LLM:
-    - Documentation articles
+    - Documentation overview and documentation search results
     - Lists of Accounts, Databases, Engines
 
 3. **Prompts** - Predefined instructions for the LLM:

@@ -14,7 +14,7 @@ import (
 )
 
 type Input struct {
-	DocsProof string `json:"docs_proof" jsonschema:"This parameter is used to confirm that the essential documentation has been reviewed before connecting to Firebolt. The correct value will be returned by the 'firebolt_docs' tool when it is called without any parameters."`
+	DocsProof string `json:"docs_proof,omitempty" jsonschema:"This parameter is used to confirm that the essential documentation has been reviewed before connecting to Firebolt. The correct value will be returned by the 'firebolt_docs' tool when it is called without any parameters."`
 }
 
 type Output struct {
@@ -51,7 +51,7 @@ type Connect struct {
 	accountsFetcher  AccountResourcesFetcher  // Fetches account resources
 	databasesFetcher DatabaseResourcesFetcher // Fetches database resources
 	enginesFetcher   EngineResourcesFetcher   // Fetches engine resources
-	docsProof        string                   // Shared with the docs resources
+	docsProof        *string                  // Shared with the docs resources
 	disableResources bool                     // Return text content instead of embedded resources
 }
 
@@ -61,7 +61,7 @@ func NewConnect(
 	accountsFetcher AccountResourcesFetcher,
 	databasesFetcher DatabaseResourcesFetcher,
 	enginesFetcher EngineResourcesFetcher,
-	docsProof string,
+	docsProof *string,
 	disableResources bool,
 ) *Connect {
 	return &Connect{
@@ -94,7 +94,7 @@ func (t *Connect) Register(s *mcp.Server) {
 // databases and engines for each account.
 func (t *Connect) Handler() mcp.ToolHandlerFor[Input, *Output] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
-		if input.DocsProof != t.docsProof {
+		if t.docsProof != nil && input.DocsProof != *t.docsProof {
 			return nil, nil, fmt.Errorf("invalid documentation proof, " +
 				"you need to call `firebolt_docs` tool first and extract value from this parameter from the response")
 		}

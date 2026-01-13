@@ -12,7 +12,6 @@ import (
 )
 
 type Input struct {
-	ArticlesIDs []string `json:"articles,omitempty" jsonschema:"Identifiers of the articles to fetch from Firebolt documentation"`
 }
 
 type Output struct {
@@ -38,12 +37,10 @@ func (t *Docs) Tool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:  "firebolt_docs",
 		Title: "Firebolt Documentation",
-		Description: "Returns Firebolt documentation articles. " +
-			"Use this tool whenever you asked a question about Firebolt or need to connect to and use Firebolt. " +
+		Description: "Returns Firebolt documentation overview. " +
+			"Use this tool when need to get general information about Firebolt or need to connect to and use Firebolt. " +
 			"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. " +
-			"Calling this tool without any parameters will return an overview document containing essential Firebolt fundamentals, " +
-			"an index of detailed documentation articles, and a secret value expected by `firebolt_connect` tool that confirms you have read the documentation. " +
-			"To retrieve specific articles, call this tool with their corresponding IDs using the `articles` parameter.",
+			"To search for detailed information about using Firebolt, query syntax, object types etc use `firebolt_search` tool",
 	}
 }
 
@@ -57,18 +54,12 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
 
 		var results []*mcp.ResourceContents // Collection of fetched documentation resources
 
-		articleIDs := input.ArticlesIDs
-
-		// Default articles to return if none specified
-		if len(articleIDs) == 0 {
-			articleIDs = append(
-				articleIDs,
-				resources.DocsArticleOverview, // General Firebolt overview
-				resources.DocsArticleProof,    // Contains proof value for connect tool
-				// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_search`
-				// to get the detailed documentation.
-				// resources.DocsArticleReference, // Reference documentation
-			)
+		articleIDs := []string{
+			resources.DocsArticleOverview, // General Firebolt overview
+			resources.DocsArticleProof,    // Contains proof value for connect tool
+			// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_search`
+			// to get the detailed documentation.
+			// resources.DocsArticleReference, // Reference documentation
 		}
 
 		// Fetch each requested article

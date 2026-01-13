@@ -26,63 +26,7 @@ func TestDocs_Tool(t *testing.T) {
 
 	tool := docsTool.Tool()
 	assert.Equal(t, "firebolt_docs", tool.Name)
-	assert.Contains(t, tool.Description, "Returns Firebolt documentation articles")
-}
-
-func TestDocs_Handler_SpecificArticles(t *testing.T) {
-	// Create test data for specific articles
-	mockArticles := map[string]string{
-		"article1": "# Article 1\nContent for article 1",
-		"article2": "# Article 2\nContent for article 2",
-	}
-
-	// Create mock fetcher that returns the mock articles
-	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
-			content, exists := mockArticles[article]
-			if !exists {
-				return nil, errors.New("article not found")
-			}
-			return &mcp.ReadResourceResult{
-				Contents: []*mcp.ResourceContents{createDocResource(article, content)},
-			}, nil
-		},
-	}
-
-	// Create the tool
-	docsTool := tool_docs.NewDocs(mock, false)
-
-	// Execute the handler with specific articles
-	request := &mcp.CallToolRequest{}
-	// request.Params.Arguments = map[string]any{
-	// 	"articles": []any{"article1", "article2"},
-	// }
-	in := tool_docs.Input{ArticlesIDs: []string{"article1", "article2"}}
-	result, out, err := docsTool.Handler()(t.Context(), request, in)
-
-	// Assertions
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.False(t, result.IsError)
-
-	// Should return the 2 requested articles
-	assert.Len(t, out.Articles, 2)
-
-	// Verify the content contains all expected resources
-	resourceMap := make(map[string]string)
-	for _, content := range out.Articles {
-		embeddedResource, ok := content.(*mcp.EmbeddedResource)
-		require.True(t, ok, "Expected EmbeddedResource")
-
-		resourceMap[embeddedResource.Resource.URI] = embeddedResource.Resource.Text
-	}
-
-	// Check if all requested articles are present
-	for articleID, expectedContent := range mockArticles {
-		uri := "firebolt://docs/" + articleID
-		assert.Contains(t, resourceMap, uri)
-		assert.Equal(t, expectedContent, resourceMap[uri])
-	}
+	assert.Contains(t, tool.Description, "Returns Firebolt documentation overview")
 }
 
 func TestDocs_Handler_FetchError(t *testing.T) {
@@ -98,9 +42,7 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tool_docs.Input{
-		ArticlesIDs: []string{},
-	}
+	in := tool_docs.Input{}
 	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
@@ -108,54 +50,6 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to discover resources")
 	assert.Nil(t, result)
 	assert.Nil(t, out)
-}
-
-func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
-	// Create mock fetcher that returns multiple resources for a single article ID
-	mock := &MockDocsFetcher{
-		FetchDocsFunc: func(ctx context.Context, article string) (*mcp.ReadResourceResult, error) {
-			if article == "multi-resource" {
-				return &mcp.ReadResourceResult{
-					Contents: []*mcp.ResourceContents{
-						createDocResource("multi-resource-1", "# Part 1\nContent part 1"),
-						createDocResource("multi-resource-2", "# Part 2\nContent part 2"),
-					},
-				}, nil
-			}
-			return nil, errors.New("article not found")
-		},
-	}
-
-	// Create the tool
-	docsTool := tool_docs.NewDocs(mock, false)
-
-	// Execute the handler
-	request := &mcp.CallToolRequest{}
-	in := tool_docs.Input{
-		ArticlesIDs: []string{"multi-resource"},
-	}
-	result, out, err := docsTool.Handler()(t.Context(), request, in)
-
-	// Assertions
-	require.NoError(t, err)
-	require.NotNil(t, result)
-	assert.False(t, result.IsError)
-
-	// Should return both resources
-	require.NotNil(t, out)
-	assert.Len(t, out.Articles, 2)
-
-	// Verify both parts are present
-	resourceMap := make(map[string]bool)
-	for _, content := range out.Articles {
-		embeddedResource, ok := content.(*mcp.EmbeddedResource)
-		require.True(t, ok, "Expected EmbeddedResource")
-
-		resourceMap[embeddedResource.Resource.URI] = true
-	}
-
-	assert.True(t, resourceMap["firebolt://docs/multi-resource-1"])
-	assert.True(t, resourceMap["firebolt://docs/multi-resource-2"])
 }
 
 func TestDocs_Handler_DisableResources(t *testing.T) {
@@ -184,9 +78,7 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 
 	// Execute the handler with empty request (should return default articles)
 	request := &mcp.CallToolRequest{}
-	in := tool_docs.Input{
-		ArticlesIDs: []string{},
-	}
+	in := tool_docs.Input{}
 	result, out, err := docsTool.Handler()(t.Context(), request, in)
 
 	// Assertions
