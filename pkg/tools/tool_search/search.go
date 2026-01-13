@@ -39,6 +39,8 @@ type Search struct {
 	cl *http.Client
 }
 
+// Tool returns the mcp.Tool definition for the Search tool.
+// This defines how the tool is represented in the MCP system.
 func (t *Search) Tool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:  "firebolt_search",
@@ -48,12 +50,15 @@ func (t *Search) Tool() *mcp.Tool {
 	}
 }
 
+// Register adds the Search tool to the provided MCP server instance.
 func (t *Search) Register(s *mcp.Server) {
 	{
 		mcp.AddTool(s, t.Tool(), t.Handler())
 	}
 }
 
+// Handler processes tool invocation requests and executes SQL queries against Firebolt.
+// It performs RAG search in Firebolt.
 func (t *Search) Handler() mcp.ToolHandlerFor[Input, *Output] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 		if input.Query == "" {
@@ -103,6 +108,8 @@ func (t *Search) Handler() mcp.ToolHandlerFor[Input, *Output] {
 	}
 }
 
+// NewSearch creates a new instance of the Search tool using the provided config.
+// The config includes auth credentials oauth2 token URL and base URL for search queries.
 func NewSearch(ctx context.Context, cfg Config) (*Search, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid config for search tool: %w", err)
