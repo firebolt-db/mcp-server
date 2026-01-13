@@ -22,7 +22,7 @@ const (
 )
 
 type Input struct {
-	Query string `json:"query"`
+	Query string `json:"query" jsonschema:"Search query string"`
 }
 
 type Output struct {
