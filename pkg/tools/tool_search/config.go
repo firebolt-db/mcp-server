@@ -6,10 +6,7 @@ import (
 )
 
 type Config struct {
-	TopK                         int
-	MinScore                     float64
-	IncludeChunks, IncludeScores bool
-	BaseURL                      string
+	BaseURL string
 
 	ClientID, ClientSecret string
 	TokenURL               string
@@ -18,7 +15,6 @@ type Config struct {
 func (c Config) Validate() error {
 	return validation.ValidateStruct(
 		&c,
-		validation.Field(&c.TopK, validation.Required, validation.Min(1)),
 		validation.Field(&c.BaseURL, validation.Required, is.URL),
 		validation.Field(&c.ClientID, validation.Required),
 		validation.Field(&c.ClientSecret, validation.Required),

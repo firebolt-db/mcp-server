@@ -161,9 +161,9 @@ func TestDocs_Handler_MultipleFetchedResources(t *testing.T) {
 func TestDocs_Handler_DisableResources(t *testing.T) {
 	// Create test data for default articles
 	mockArticles := map[string]string{
-		resources.DocsArticleOverview:  "# Firebolt Overview\nThis is an overview of Firebolt.",
-		resources.DocsArticleProof:     "# Proof Document\nSecret proof: proof_value_123",
-		resources.DocsArticleReference: "# Reference\nThis is the reference documentation.",
+		resources.DocsArticleOverview: "# Firebolt Overview\nThis is an overview of Firebolt.",
+		resources.DocsArticleProof:    "# Proof Document\nSecret proof: proof_value_123",
+		// resources.DocsArticleReference: "# Reference\nThis is the reference documentation.",
 	}
 
 	// Create mock fetcher that returns the mock articles
@@ -196,7 +196,7 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 
 	// Should return 3 default articles
 	require.NotNil(t, out)
-	assert.Len(t, out.Articles, 3)
+	assert.Len(t, out.Articles, 2)
 
 	// Verify the content contains text content instead of embedded resources
 	textContents := make(map[string]string)

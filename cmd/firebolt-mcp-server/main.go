@@ -23,6 +23,7 @@ import (
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs"
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_search"
 )
 
 var (
@@ -137,6 +138,19 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceDatabases := resources.NewDatabases(dbPool)
 	resourceEngines := resources.NewEngines(dbPool)
+
+	searchCfg := tool_search.Config{
+		BaseURL:      fmt.Sprintf("https://api.%s", cmd.String("environment")),
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TokenURL:     fmt.Sprintf("https://id.%s/oauth/token", cmd.String("environment")),
+	}
+
+	searchTool, err := tool_search.NewSearch(ctx, searchCfg)
+	if err != nil {
+		return fmt.Errorf("failed to create search tool: %w", err)
+	}
+
 	srv := server.NewServer(
 		logger,
 		fullVersion(),
@@ -146,6 +160,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 			tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
 			tool_docs.NewDocs(resourceDocs, disableResources),
 			tool_query.NewQuery(dbPool),
+			searchTool,
 		},
 		[]server.Prompt{
 			prompts.NewFireboltExpert(),

@@ -63,9 +63,11 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		if len(articleIDs) == 0 {
 			articleIDs = append(
 				articleIDs,
-				resources.DocsArticleOverview,  // General Firebolt overview
-				resources.DocsArticleProof,     // Contains proof value for connect tool
-				resources.DocsArticleReference, // Reference documentation
+				resources.DocsArticleOverview, // General Firebolt overview
+				resources.DocsArticleProof,    // Contains proof value for connect tool
+				// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_search`
+				// to get the detailed documentation.
+				// resources.DocsArticleReference, // Reference documentation
 			)
 		}
 
