@@ -179,7 +179,7 @@ Firebolt MCP Server implements the [Model Context Protocol](https://modelcontext
     - `firebolt_search`: Search Firebolt documentation for any details
 
 2. **Resources** - Data that can be referenced by the LLM:
-    - Documentation overview and documentation search results
+    - Documentation articles
     - Lists of Accounts, Databases, Engines
 
 3. **Prompts** - Predefined instructions for the LLM:
