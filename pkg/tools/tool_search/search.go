@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"golang.org/x/oauth2"
@@ -52,13 +51,11 @@ func (t *Search) Tool() *mcp.Tool {
 
 // Register adds the Search tool to the provided MCP server instance.
 func (t *Search) Register(s *mcp.Server) {
-	{
-		mcp.AddTool(s, t.Tool(), t.Handler())
-	}
+	mcp.AddTool(s, t.Tool(), t.Handler())
 }
 
-// Handler processes tool invocation requests and executes SQL queries against Firebolt.
-// It performs RAG search in Firebolt.
+// Handler processes tool invocation requests and performs RAG-based search over the
+// Firebolt documentation and knowledge base via the docs search HTTP API.
 func (t *Search) Handler() mcp.ToolHandlerFor[Input, *Output] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 		if input.Query == "" {
@@ -74,8 +71,8 @@ func (t *Search) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		// run the search query
 		r, err := http.NewRequestWithContext(ctx,
 			http.MethodGet,
-			t.baseURL+"/docs/v1/search/"+url.QueryEscape(input.Query),
-			strings.NewReader(params.Encode()),
+			t.baseURL+"/docs/v1/search/"+url.QueryEscape(input.Query)+"?"+params.Encode(),
+			nil,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create search request: %w", err)
