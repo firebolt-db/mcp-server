@@ -35,8 +35,8 @@ type Docs struct {
 
 func (t *Docs) Tool() *mcp.Tool {
 	return &mcp.Tool{
-		Name:  "firebolt_docs",
-		Title: "Firebolt Documentation",
+		Name:  "firebolt_docs_overview",
+		Title: "Firebolt Documentation Overview",
 		Description: "Returns Firebolt documentation overview. " +
 			"Use this tool when need to get general information about Firebolt or need to connect to and use Firebolt. " +
 			"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. " +

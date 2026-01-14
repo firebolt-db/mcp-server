@@ -172,7 +172,7 @@ Optionally, you can specify the address the server should listen on by setting t
 #### Requiring LLMs to present docs read proof before connecting
 
 To provide wider context to LLMs before connecting to Firebolt and running queries, by default `firebolt_connect` tool
-requires the LLM to present a read proof of the Firebolt documentation (by querying the `firebolt_docs` tool).
+requires the LLM to present a read proof of the Firebolt documentation (by querying the `firebolt_docs_overview` tool).
 
 While this provides a good starting point for LLMs ensuring it has full context of Firebolt documentation, at the same time this may lead to slower responses and higher token consumption.
 
@@ -183,7 +183,7 @@ To disable this requirement, set the `--require-docs-proof` CLI flag (or the `FI
 Firebolt MCP Server implements the [Model Context Protocol](https://modelcontextprotocol.io/introduction), providing:
 
 1. **Tools** - Task-specific capabilities provided to the LLM:
-    - `firebolt_docs`: Access basic Firebolt documentation overview
+    - `firebolt_docs_overview`: Access basic Firebolt documentation overview
     - `firebolt_connect`: Establish connections to Firebolt engines and databases
     - `firebolt_query`: Execute SQL queries against Firebolt
     - `firebolt_docs_search`: Search Firebolt documentation for any details

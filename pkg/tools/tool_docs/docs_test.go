@@ -25,7 +25,7 @@ func TestDocs_Tool(t *testing.T) {
 	docsTool := tool_docs.NewDocs(mock, false)
 
 	tool := docsTool.Tool()
-	assert.Equal(t, "firebolt_docs", tool.Name)
+	assert.Equal(t, "firebolt_docs_overview", tool.Name)
 	assert.Contains(t, tool.Description, "Returns Firebolt documentation overview")
 }
 

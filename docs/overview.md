@@ -20,9 +20,10 @@ graph TD
         Server["MCP Server Core"]
         
         subgraph "Tools"
-            DocsT["firebolt_docs"]
+            DocsT["firebolt_docs_overview"]
             ConnectT["firebolt_connect"]
             QueryT["firebolt_query"]
+            SearchT["firebolt_docs_search"]
         end
         
         subgraph "Resources"
@@ -48,7 +49,8 @@ graph TD
     
     Server --> DocsT
     Server --> ConnectT
-    Server --> QueryT
+    Server --> QueryT 
+    Server --> SearchT
     Server --> DocsR
     Server --> AccountsR
     Server --> DatabasesR
@@ -81,20 +83,24 @@ Key features:
 
 Tools are executable capabilities exposed to LLMs through the MCP interface:
 
-1. **firebolt_docs** (`pkg/tools/docs.go`)
+1. **firebolt_docs_overview** (`pkg/tools/tool_docs/docs.go`)
    - Provides access to Firebolt documentation
    - Returns embedded markdown content for various documentation articles
    - Helps LLMs understand Firebolt concepts, SQL syntax, and best practices
 
-2. **firebolt_connect** (`pkg/tools/connect.go`)
+2. **firebolt_connect** (`pkg/tools/tool_connect/connect.go`)
    - Lists available Firebolt accounts, databases, and engines
    - Requires a "proof" from documentation to ensure the LLM has read basic Firebolt information
    - Enables discovery of resources before executing queries
 
-3. **firebolt_query** (`pkg/tools/query.go`)
+3. **firebolt_query** (`pkg/tools/tool_query/query.go`)
    - Executes SQL queries against Firebolt databases
    - Manages connections to the specified account, database, and engine
    - Returns query results in JSON format
+
+4. **firebolt_docs_search** (`pkg/tools/tool_docs/search.go`)
+   - Provides RAG search functionality for Firebolt documentation
+   - Allows LLMs to find specific articles in the documentation using semantic search
 
 ### 3. Resources
 
@@ -135,9 +141,10 @@ The MCP server includes specialized clients to interact with Firebolt services:
 sequenceDiagram
     participant LLM as LLM Client
     participant Server as MCP Server
-    participant Docs as firebolt_docs
+    participant Docs as firebolt_docs_overview
     participant Connect as firebolt_connect
     participant Query as firebolt_query
+    participant Search as firebolt_docs_search
     participant FireboltAPI as Firebolt API
     participant FireboltDB as Firebolt Database
 
@@ -146,9 +153,17 @@ sequenceDiagram
     
     Note over LLM, Server: Documentation Flow
     LLM->>Server: Request documentation
-    Server->>Docs: Call firebolt_docs
+    Server->>Docs: Call firebolt_docs_overview
     Docs->>Server: Return documentation resources
     Server->>LLM: Documentation content
+    
+    Note over LLM, Server: Search Flow
+    LLM->>Server: Request documentation search
+    Server->>Search: Call firebolt_docs_search
+    Search->>FireboltAPI: Call API to run search
+    FireboltAPI->>Search: Return search results
+    Search->>Server: Return search results
+    Server->>LLM: Search results content
     
     Note over LLM, Server: Connection Flow
     LLM->>Server: Request resources

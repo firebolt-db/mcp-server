@@ -14,7 +14,7 @@ import (
 )
 
 type Input struct {
-	DocsProof string `json:"docs_proof,omitempty" jsonschema:"This parameter is used to confirm that the essential documentation has been reviewed before connecting to Firebolt. The correct value will be returned by the 'firebolt_docs' tool when it is called without any parameters."`
+	DocsProof string `json:"docs_proof,omitempty" jsonschema:"This parameter is used to confirm that the essential documentation has been reviewed before connecting to Firebolt. The correct value will be returned by the 'firebolt_docs_overview' tool when it is called without any parameters."`
 }
 
 type Output struct {
@@ -96,7 +96,7 @@ func (t *Connect) Handler() mcp.ToolHandlerFor[Input, *Output] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 		if t.docsProof != nil && input.DocsProof != *t.docsProof {
 			return nil, nil, fmt.Errorf("invalid documentation proof, " +
-				"you need to call `firebolt_docs` tool first and extract value from this parameter from the response")
+				"you need to call `firebolt_docs_overview` tool first and extract value from this parameter from the response")
 		}
 
 		// Fetch all accounts
