@@ -207,6 +207,7 @@ Firebolt supports standard SQL data types.
 
 ## 11. Detailed information about Firebolt features
 
-Use `firebolt_search` MCP Server tool to get detailed information about Firebolt features, objects, data types, and query syntax. This tool provides search in the current Firebolt documentation. 
+Use `firebolt_docs_search` MCP Server tool to get detailed information about Firebolt features, objects, data types, and query syntax. This tool provides search in the current Firebolt documentation.
+The search uses semantic algorithms. The tool can be called multiple times and/or concurrently with different queries to improve search results.
 
 ---

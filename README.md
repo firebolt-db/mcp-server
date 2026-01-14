@@ -186,7 +186,7 @@ Firebolt MCP Server implements the [Model Context Protocol](https://modelcontext
     - `firebolt_docs`: Access basic Firebolt documentation overview
     - `firebolt_connect`: Establish connections to Firebolt engines and databases
     - `firebolt_query`: Execute SQL queries against Firebolt
-    - `firebolt_search`: Search Firebolt documentation for any details
+    - `firebolt_docs_search`: Search Firebolt documentation for any details
 
 2. **Resources** - Data that can be referenced by the LLM:
     - Documentation articles

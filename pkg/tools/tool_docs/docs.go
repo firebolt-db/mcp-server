@@ -40,7 +40,7 @@ func (t *Docs) Tool() *mcp.Tool {
 		Description: "Returns Firebolt documentation overview. " +
 			"Use this tool when need to get general information about Firebolt or need to connect to and use Firebolt. " +
 			"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. " +
-			"To search for detailed information about using Firebolt, query syntax, object types etc use `firebolt_search` tool",
+			"To search for detailed information about using Firebolt, query syntax, object types etc use `firebolt_docs_search` tool",
 	}
 }
 
@@ -57,7 +57,7 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		articleIDs := []string{
 			resources.DocsArticleOverview, // General Firebolt overview
 			resources.DocsArticleProof,    // Contains proof value for connect tool
-			// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_search`
+			// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_docs_search`
 			// to get the detailed documentation.
 			// resources.DocsArticleReference, // Reference documentation
 		}

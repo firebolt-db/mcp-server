@@ -42,8 +42,8 @@ type Search struct {
 // This defines how the tool is represented in the MCP system.
 func (t *Search) Tool() *mcp.Tool {
 	return &mcp.Tool{
-		Name:  "firebolt_search",
-		Title: "Firebolt Search",
+		Name:  "firebolt_docs_search",
+		Title: "Firebolt Documentation Search",
 		Description: "Returns search results from Firebolt knowledge base using RAG. " +
 			"Use this tool to find answers to your questions about how to use Firebolt. ",
 	}

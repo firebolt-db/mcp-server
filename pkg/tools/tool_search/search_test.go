@@ -44,7 +44,7 @@ func TestNewSearch_Tool(t *testing.T) {
 	require.NotNil(t, search)
 
 	tool := search.Tool()
-	require.Equal(t, "firebolt_search", tool.Name)
+	require.Equal(t, "firebolt_docs_search", tool.Name)
 	assert.Contains(t, tool.Description, "Returns search results from Firebolt knowledge base using RAG")
 }
 
