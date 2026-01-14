@@ -100,9 +100,10 @@ func main() {
 			&cli.BoolFlag{
 				Name:     "require-docs-proof",
 				Category: "MCP Tools Configuration",
-				Value:    false,
-				Usage:    "Require LLM to provide a token as a proof it has reviewed documentation overview",
-				Sources:  cli.EnvVars("FIREBOLT_MCP_REQUIRE_DOCS_PROOF"),
+				Value:    true,
+				Usage: "Require LLM to provide a token as a proof it has reviewed documentation overview. When enabled, LLM " +
+					"will be forced to gather more starting context and become smarter, but this means more tokens consumed and slower responses.",
+				Sources: cli.EnvVars("FIREBOLT_MCP_REQUIRE_DOCS_PROOF"),
 			},
 		},
 		Action: run,
