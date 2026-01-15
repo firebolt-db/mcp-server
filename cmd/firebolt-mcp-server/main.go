@@ -164,8 +164,6 @@ func run(ctx context.Context, cmd *cli.Command) error {
 		docsProof = &docsProofToken
 	}
 
-	fmt.Println(cmd.Bool("skip-docs-proof"))
-
 	srv := server.NewServer(
 		logger,
 		fullVersion(),
