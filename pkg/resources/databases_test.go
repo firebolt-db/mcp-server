@@ -51,6 +51,37 @@ func TestDatabaseURI(t *testing.T) {
 	}
 }
 
+func TestCoreDatabaseURI(t *testing.T) {
+	tests := []struct {
+		name     string
+		database string
+		expected string
+	}{
+		{
+			name:     "basic case",
+			database: "test-database",
+			expected: "firebolt://databases/test-database",
+		},
+		{
+			name:     "with special characters",
+			database: "test-database-123",
+			expected: "firebolt://databases/test-database-123",
+		},
+		{
+			name:     "empty values",
+			database: "",
+			expected: "firebolt://databases/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := resources.CoreDatabaseURI(tt.database)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestNewDatabases(t *testing.T) {
 	pool := databasemock.NewPoolMock()
 	databases := resources.NewDatabases(pool)
@@ -297,6 +328,85 @@ func TestDatabases_FetchDatabaseResources(t *testing.T) {
 
 				assert.Equal(t, tt.expected[i], data)
 				assert.Equal(t, resources.DatabaseURI(tt.account, data["database_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
+			}
+		})
+	}
+}
+
+func TestDatabases_FetchCoreDatabaseResources(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockSetup     func(*databasemock.PoolMock, *databasemock.ConnectionMock)
+		expected      []map[string]any
+		expectedError string
+	}{
+		{
+			name: "fetch all database",
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					assert.Equal(t, "SELECT database_name, description FROM information_schema.databases;", sql)
+					return []map[string]any{
+						{
+							"database_name": "test-database",
+							"description":   "Production database",
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expected: []map[string]any{
+				{
+					"database_name": "test-database",
+					"description":   "Production database",
+				},
+			},
+		},
+		{
+			name: "json marshaling error",
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					return []map[string]any{
+						{
+							"database_name": make(chan int), // Channels are not JSON-serializable
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expectedError: "failed to marshal row data to JSON",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pool := databasemock.NewPoolMock()
+			conn := databasemock.NewConnectionMock()
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(pool, conn)
+			}
+
+			databases := resources.NewDatabases(pool)
+
+			result, err := databases.FetchCoreDatabaseResources(t.Context())
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, result.Contents, len(tt.expected))
+
+			for i, res := range result.Contents {
+				var data map[string]any
+				err := json.Unmarshal([]byte(res.Text), &data)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expected[i], data)
+				assert.Equal(t, resources.CoreDatabaseURI(data["database_name"].(string)), res.URI)
 				assert.Equal(t, mimetype.JSON, res.MIMEType)
 			}
 		})

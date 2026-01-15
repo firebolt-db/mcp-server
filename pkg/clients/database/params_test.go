@@ -155,6 +155,93 @@ func TestConnectionParams_HashDifference(t *testing.T) {
 	assert.NotEqual(t, hash1, hash2, "Different parameters should have different hashes")
 }
 
+func TestCoreConnectionParams_DriverName(t *testing.T) {
+	params := database.CoreConnectionParams{}
+	assert.Equal(t, "firebolt", params.DriverName(), "DriverName should return 'firebolt'")
+}
+
+func TestCoreConnectionParams_DSN(t *testing.T) {
+	tests := []struct {
+		name     string
+		params   database.CoreConnectionParams
+		expected string
+	}{
+		{
+			name: "full params",
+			params: database.CoreConnectionParams{
+				URL:          "http://localhost:3744",
+				DatabaseName: strPtr("test-db"),
+			},
+			expected: "firebolt:///test-db?url=http://localhost:3744",
+		},
+		{
+			name: "nil database",
+			params: database.CoreConnectionParams{
+				URL: "http://localhost:3744",
+			},
+			expected: "firebolt://?url=http://localhost:3744",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.params.DSN(), "DSN should match expected value")
+		})
+	}
+}
+
+func TestCoreConnectionParams_String(t *testing.T) {
+	params := database.CoreConnectionParams{
+		URL:          "http://localhost:3744",
+		DatabaseName: strPtr("test-db"),
+	}
+
+	assert.Equal(t, "firebolt:///test-db?url=http://localhost:3744", params.String())
+}
+
+func TestCoreConnectionParams_Hash(t *testing.T) {
+	params := database.CoreConnectionParams{
+		URL:          "http://localhost:3744",
+		DatabaseName: strPtr("test-db"),
+	}
+
+	// Calculate expected hash manually
+	dsn := params.DSN()
+	sum := sha512.Sum512_256([]byte(dsn))
+	expected := hex.EncodeToString(sum[:])
+
+	assert.Equal(t, expected, params.Hash(), "Hash should match expected value")
+}
+
+func TestCoreConnectionParams_HashConsistency(t *testing.T) {
+	params := database.CoreConnectionParams{
+		URL:          "http://localhost:3744",
+		DatabaseName: strPtr("test-db"),
+	}
+
+	hash1 := params.Hash()
+	hash2 := params.Hash()
+
+	assert.Equal(t, hash1, hash2, "Hash should be consistent across calls")
+}
+
+func TestCoreConnectionParams_HashDifference(t *testing.T) {
+	params1 := database.CoreConnectionParams{
+		URL:          "http://localhost:3744",
+		DatabaseName: strPtr("test-db"),
+	}
+
+	params2 := database.CoreConnectionParams{
+		URL:          "http://localhost:3744",
+		DatabaseName: strPtr("different-test-db"),
+	}
+
+	hash1 := params1.Hash()
+	hash2 := params2.Hash()
+
+	assert.NotEqual(t, hash1, hash2, "Different parameters should have different hashes")
+}
+
 // Helper function to create a string pointer
 func strPtr(s string) *string {
 	return &s

@@ -18,6 +18,10 @@ func DatabaseURI(account, database string) string {
 	return fmt.Sprintf("firebolt://accounts/%s/databases/%s", account, database)
 }
 
+func CoreDatabaseURI(database string) string {
+	return fmt.Sprintf("firebolt://databases/%s", database)
+}
+
 // Databases is a resource template handler for serving Firebolt database information.
 type Databases struct {
 	dbPool database.Pool
@@ -96,6 +100,44 @@ func (r *Databases) FetchDatabaseResources(ctx context.Context, account, dbName 
 
 		return &mcp.ResourceContents{
 			URI:      DatabaseURI(account, i["database_name"].(string)),
+			MIMEType: mimetype.JSON,
+			Text:     string(data),
+		}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcp.ReadResourceResult{
+		Contents: out,
+	}, nil
+}
+
+func (r *Databases) FetchCoreDatabaseResources(ctx context.Context) (*mcp.ReadResourceResult, error) {
+	// Acquire a connection to the database
+	conn, err := r.dbPool.GetConnection(database.PoolParams{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire database connection: %w", err)
+	}
+
+	sql := "SELECT database_name, description FROM information_schema.databases;"
+
+	// run the query
+	rows, err := conn.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query database: %w", err)
+	}
+
+	// Convert rows to resources
+	out, err := itertools.MapWithFailure(rows, func(i map[string]any) (*mcp.ResourceContents, error) {
+
+		data, err := json.Marshal(i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal row data to JSON: %w", err)
+		}
+
+		return &mcp.ResourceContents{
+			URI:      CoreDatabaseURI(i["database_name"].(string)),
 			MIMEType: mimetype.JSON,
 			Text:     string(data),
 		}, nil
