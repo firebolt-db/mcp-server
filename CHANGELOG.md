@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/firebolt-db/mcp-server/compare/v0.4.1...v0.5.0) (2026-01-15)
+
+
+### Features
+
+* add search tool with RAG ([#57](https://github.com/firebolt-db/mcp-server/issues/57)) ([da25cd1](https://github.com/firebolt-db/mcp-server/commit/da25cd1ef88065c02a7bb6092e5733e2ffe064ca))
+
 ## [0.4.1](https://github.com/firebolt-db/mcp-server/compare/v0.4.0...v0.4.1) (2026-01-12)
 
 
