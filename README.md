@@ -176,7 +176,7 @@ requires the LLM to present a read proof of the Firebolt documentation (by query
 
 While this provides a good starting point for LLMs ensuring it has full context of Firebolt documentation, at the same time this may lead to slower responses and higher token consumption.
 
-To disable this requirement, set the `--require-docs-proof` CLI flag (or the `FIREBOLT_MCP_REQUIRE_DOCS_PROOF` environment variable) to `false`.
+To disable this requirement, set the `--skip-docs-proof` CLI bool flag (or the `FIREBOLT_MCP_SKIP_DOCS_PROOF` environment variable) to `false`.
 
 ## Architecture
 

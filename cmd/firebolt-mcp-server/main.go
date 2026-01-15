@@ -98,12 +98,12 @@ func main() {
 				Sources:  cli.EnvVars("FIREBOLT_MCP_ENVIRONMENT"),
 			},
 			&cli.BoolFlag{
-				Name:     "require-docs-proof",
+				Name:     "skip-docs-proof",
 				Category: "MCP Tools Configuration",
-				Value:    true,
-				Usage: "Require LLM to provide a token as a proof it has reviewed documentation overview. When enabled, LLM " +
-					"will be forced to gather more starting context and become smarter, but this means more tokens consumed and slower responses.",
-				Sources: cli.EnvVars("FIREBOLT_MCP_REQUIRE_DOCS_PROOF"),
+				Value:    false,
+				Usage: "Skip the requirement for LLM to provide a token as a proof it has reviewed documentation overview. When enabled, LLM " +
+					"will not be forced to gather more starting context and become smarter, but this means more tokens consumed and slower responses.",
+				Sources: cli.EnvVars("FIREBOLT_MCP_SKIP_DOCS_PROOF"),
 			},
 		},
 		Action: run,
@@ -160,9 +160,11 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	var docsProof *string
-	if cmd.Bool("require-docs-proof") {
+	if !cmd.Bool("skip-docs-proof") {
 		docsProof = &docsProofToken
 	}
+
+	fmt.Println(cmd.Bool("skip-docs-proof"))
 
 	srv := server.NewServer(
 		logger,
