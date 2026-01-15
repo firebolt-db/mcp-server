@@ -1,4 +1,4 @@
-package tools_test
+package tool_query_test
 
 import (
 	"context"
@@ -12,18 +12,18 @@ import (
 
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
 	"github.com/firebolt-db/mcp-server/pkg/clients/database/databasemock"
-	"github.com/firebolt-db/mcp-server/pkg/tools"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
 )
 
 func TestNewQuery(t *testing.T) {
 	mockPool := databasemock.NewPoolMock()
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 	assert.NotNil(t, queryTool)
 }
 
 func TestQuery_Tool(t *testing.T) {
 	mockPool := databasemock.NewPoolMock()
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	tool := queryTool.Tool()
 	assert.Equal(t, "firebolt_query", tool.Name)
@@ -58,11 +58,11 @@ func TestQuery_Handler_Success(t *testing.T) {
 		EngineName:   ptrTo("test-engine"),
 	}, mockConnection)
 
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	// Create a request with all parameters
 	request := &mcp.CallToolRequest{}
-	in := tools.QueryInput{
+	in := tool_query.Input{
 		Query:    "SELECT * FROM test",
 		Account:  "test-account",
 		Database: "test-db",
@@ -112,11 +112,11 @@ func TestQuery_Handler_MinimalParameters(t *testing.T) {
 		// No database or engine specified
 	}, mockConnection)
 
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	// Create a request with only required parameters
 	request := &mcp.CallToolRequest{}
-	in := tools.QueryInput{
+	in := tool_query.Input{
 		Query:   "SHOW ENGINES",
 		Account: "test-account",
 	}
@@ -144,26 +144,26 @@ func TestQuery_Handler_MinimalParameters(t *testing.T) {
 
 func TestQuery_Handler_MissingRequiredParameters(t *testing.T) {
 	mockPool := databasemock.NewPoolMock()
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	testCases := []struct {
 		name      string
-		in        tools.QueryInput
+		in        tool_query.Input
 		errSubstr string
 	}{
 		{
 			name:      "missing query",
-			in:        tools.QueryInput{Account: "test-account"},
+			in:        tool_query.Input{Account: "test-account"},
 			errSubstr: "query",
 		},
 		{
 			name:      "missing account",
-			in:        tools.QueryInput{Query: "SELECT 1"},
+			in:        tool_query.Input{Query: "SELECT 1"},
 			errSubstr: "account",
 		},
 		{
 			name:      "empty request",
-			in:        tools.QueryInput{},
+			in:        tool_query.Input{},
 			errSubstr: "bad request",
 		},
 	}
@@ -190,10 +190,10 @@ func TestQuery_Handler_ConnectionError(t *testing.T) {
 		},
 	)
 
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	request := &mcp.CallToolRequest{}
-	in := tools.QueryInput{
+	in := tool_query.Input{
 		Query:   "SELECT 1",
 		Account: "test-account",
 	}
@@ -218,10 +218,10 @@ func TestQuery_Handler_QueryError(t *testing.T) {
 		AccountName: "test-account",
 	}, mockConnection)
 
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	request := &mcp.CallToolRequest{}
-	in := tools.QueryInput{
+	in := tool_query.Input{
 		Query:   "SELECT * FROM nonexistent_table",
 		Account: "test-account",
 	}
@@ -254,10 +254,10 @@ func TestQuery_Handler_JSONMarshalError(t *testing.T) {
 		AccountName: "test-account",
 	}, mockConnection)
 
-	queryTool := tools.NewQuery(mockPool)
+	queryTool := tool_query.NewQuery(mockPool)
 
 	request := &mcp.CallToolRequest{}
-	in := tools.QueryInput{
+	in := tool_query.Input{
 		Query:   "SELECT problematic_data()",
 		Account: "test-account",
 	}

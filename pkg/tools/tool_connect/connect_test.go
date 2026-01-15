@@ -1,4 +1,4 @@
-package tools_test
+package tool_connect_test
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/mimetype"
-	"github.com/firebolt-db/mcp-server/pkg/tools"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
 )
 
-const validProof = "valid_proof"
+var validProof = "valid_proof"
 
 // MockResourceFetcher is a test implementation of the resource fetcher interfaces
 type MockResourceFetcher struct {
@@ -80,20 +80,20 @@ func createEngineResource(accountName, engineName string) *mcp.ResourceContents 
 
 func TestNewConnect(t *testing.T) {
 	mock := &MockResourceFetcher{}
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, nil, false)
 	assert.NotNil(t, connectTool)
 }
 
 func TestConnect_Tool(t *testing.T) {
 	mock := &MockResourceFetcher{}
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, nil, false)
 
 	tool := connectTool.Tool()
 	assert.Equal(t, "firebolt_connect", tool.Name)
 	assert.Contains(t, tool.Description, "Returns a list of Firebolt accounts")
 }
 
-func TestConnect_Handler_Success(t *testing.T) {
+func TestConnect_Handler_Success_RequireProof(t *testing.T) {
 	// Create test data
 	accounts := []string{"account1", "account2"}
 	databases := map[string][]string{
@@ -137,13 +137,114 @@ func TestConnect_Handler_Success(t *testing.T) {
 	}
 
 	// Create the tool
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, &validProof, false)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
+	result, out, err := connectTool.Handler()(t.Context(), request, in)
+
+	// Assertions
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, out)
+	assert.False(t, result.IsError)
+
+	// Calculate expected total resources
+	expectedCount := len(accounts) // accounts
+	for _, dbs := range databases {
+		expectedCount += len(dbs) // databases
+	}
+	for _, engs := range engines {
+		expectedCount += len(engs) // engines
+	}
+
+	// Check if we got the expected number of resources
+	assert.Len(t, out.Results, expectedCount)
+
+	// Verify the content contains all expected resources
+	resourceMap := make(map[string]bool)
+	for _, content := range out.Results {
+		embeddedResource, ok := content.(*mcp.EmbeddedResource)
+		require.True(t, ok, "Expected EmbeddedResource")
+
+		resourceMap[embeddedResource.Resource.URI] = true
+	}
+
+	// Check if all accounts are present
+	for _, acc := range accounts {
+		uri := "firebolt://accounts/" + acc
+		assert.True(t, resourceMap[uri], "Missing account resource: "+uri)
+	}
+
+	// Check if all databases are present
+	for acc, dbs := range databases {
+		for _, db := range dbs {
+			uri := "firebolt://accounts/" + acc + "/databases/" + db
+			assert.True(t, resourceMap[uri], "Missing database resource: "+uri)
+		}
+	}
+
+	// Check if all engines are present
+	for acc, engs := range engines {
+		for _, eng := range engs {
+			uri := "firebolt://accounts/" + acc + "/engines/" + eng
+			assert.True(t, resourceMap[uri], "Missing engine resource: "+uri)
+		}
+	}
+}
+
+func TestConnect_Handler_Success_NoProofRequired(t *testing.T) {
+	// Create test data
+	accounts := []string{"account1", "account2"}
+	databases := map[string][]string{
+		"account1": {"db1", "db2"},
+		"account2": {"db3"},
+	}
+	engines := map[string][]string{
+		"account1": {"engine1"},
+		"account2": {"engine2", "engine3"},
+	}
+
+	// Create mock fetcher
+	mock := &MockResourceFetcher{
+		AccountsFunc: func(ctx context.Context, accountName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
+			for _, acc := range accounts {
+				resources = append(resources, createAccountResource(acc))
+			}
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
+		},
+		DatabasesFunc: func(ctx context.Context, accountName, databaseName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
+			for _, db := range databases[accountName] {
+				resources = append(resources, createDatabaseResource(accountName, db))
+			}
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
+		},
+		EnginesFunc: func(ctx context.Context, accountName, engineName string) (*mcp.ReadResourceResult, error) {
+			var resources []*mcp.ResourceContents
+			for _, eng := range engines[accountName] {
+				resources = append(resources, createEngineResource(accountName, eng))
+			}
+			return &mcp.ReadResourceResult{
+				Contents: resources,
+			}, nil
+		},
+	}
+
+	// Create the tool
+	connectTool := tool_connect.NewConnect(mock, mock, mock, nil, false)
+
+	// Execute the handler
+	request := &mcp.CallToolRequest{}
+	in := tool_connect.Input{}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
 
 	// Assertions
@@ -203,9 +304,9 @@ func TestConnect_Handler_AccountFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, &validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -232,9 +333,9 @@ func TestConnect_Handler_InvalidAccountJSON(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, &validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -257,9 +358,9 @@ func TestConnect_Handler_DatabasesFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, &validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -287,9 +388,9 @@ func TestConnect_Handler_EnginesFetchFailure(t *testing.T) {
 		},
 	}
 
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, false)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, &validProof, false)
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)
@@ -342,11 +443,11 @@ func TestConnect_Handler_DisableResources(t *testing.T) {
 	}
 
 	// Create the tool with disableResources set to true
-	connectTool := tools.NewConnect(mock, mock, mock, validProof, true)
+	connectTool := tool_connect.NewConnect(mock, mock, mock, &validProof, true)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
-	in := tools.ConnectInput{
+	in := tool_connect.Input{
 		DocsProof: validProof,
 	}
 	result, out, err := connectTool.Handler()(t.Context(), request, in)

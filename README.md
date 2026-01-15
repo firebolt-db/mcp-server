@@ -168,14 +168,25 @@ To enable SSE, set the `--transport` CLI flag (or the `FIREBOLT_MCP_TRANSPORT` e
 
 Optionally, you can specify the address the server should listen on by setting the `--transport-sse-listen-address` CLI flag (or the `FIREBOLT_MCP_TRANSPORT_SSE_LISTEN_ADDRESS` environment variable).
 
+
+#### Requiring LLMs to present docs read proof before connecting
+
+To provide wider context to LLMs before connecting to Firebolt and running queries, by default `firebolt_connect` tool
+requires the LLM to present a read proof of the Firebolt documentation (by querying the `firebolt_docs_overview` tool).
+
+While this provides a good starting point for LLMs ensuring it has full context of Firebolt documentation, at the same time this may lead to slower responses and higher token consumption.
+
+To disable this requirement, set the `--skip-docs-proof` CLI bool flag (or the `FIREBOLT_MCP_SKIP_DOCS_PROOF` environment variable) to `false`.
+
 ## Architecture
 
 Firebolt MCP Server implements the [Model Context Protocol](https://modelcontextprotocol.io/introduction), providing:
 
 1. **Tools** - Task-specific capabilities provided to the LLM:
-    - `firebolt_docs`: Access Firebolt documentation
+    - `firebolt_docs_overview`: Access basic Firebolt documentation overview
     - `firebolt_connect`: Establish connections to Firebolt engines and databases
     - `firebolt_query`: Execute SQL queries against Firebolt
+    - `firebolt_docs_search`: Search Firebolt documentation for any details
 
 2. **Resources** - Data that can be referenced by the LLM:
     - Documentation articles

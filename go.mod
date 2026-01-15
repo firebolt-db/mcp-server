@@ -5,6 +5,7 @@ go 1.24.1
 require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
 	github.com/firebolt-db/firebolt-go-sdk v1.13.0
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	github.com/neilotoole/slogt v1.1.0
@@ -21,6 +22,7 @@ require (
 	github.com/antchfx/htmlquery v1.3.5 // indirect
 	github.com/antchfx/xmlquery v1.5.0 // indirect
 	github.com/antchfx/xpath v1.3.5 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/astaxie/beego v1.12.3 // indirect
 	github.com/bits-and-blooms/bitset v1.24.4 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect

@@ -20,7 +20,10 @@ import (
 	"github.com/firebolt-db/mcp-server/pkg/prompts"
 	"github.com/firebolt-db/mcp-server/pkg/resources"
 	"github.com/firebolt-db/mcp-server/pkg/server"
-	"github.com/firebolt-db/mcp-server/pkg/tools"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_search"
 )
 
 var (
@@ -94,6 +97,14 @@ func main() {
 				Usage:    "Firebolt environment to connect to",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_ENVIRONMENT"),
 			},
+			&cli.BoolFlag{
+				Name:     "skip-docs-proof",
+				Category: "MCP Tools Configuration",
+				Value:    false,
+				Usage: "Skip the requirement for LLM to provide a token as a proof it has reviewed documentation overview. When enabled, LLM " +
+					"will not be forced to gather more starting context and become smarter, but this means more tokens consumed and slower responses.",
+				Sources: cli.EnvVars("FIREBOLT_MCP_SKIP_DOCS_PROOF"),
+			},
 		},
 		Action: run,
 	}
@@ -129,21 +140,40 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	// Initialize MCP server
-	docsProof := generateRandomSecret()
+	docsProofToken := generateRandomSecret()
 	disableResources := cmd.Bool("disable-resources")
-	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProof)
+	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
 	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceDatabases := resources.NewDatabases(dbPool)
 	resourceEngines := resources.NewEngines(dbPool)
+
+	searchCfg := tool_search.Config{
+		BaseURL:      fmt.Sprintf("https://api.%s", cmd.String("environment")),
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		TokenURL:     fmt.Sprintf("https://id.%s/oauth/token", cmd.String("environment")),
+	}
+
+	searchTool, err := tool_search.NewSearch(ctx, searchCfg)
+	if err != nil {
+		return fmt.Errorf("failed to create search tool: %w", err)
+	}
+
+	var docsProof *string
+	if !cmd.Bool("skip-docs-proof") {
+		docsProof = &docsProofToken
+	}
+
 	srv := server.NewServer(
 		logger,
 		fullVersion(),
 		cmd.String("transport"),
 		cmd.String("transport-sse-listen-address"),
 		[]server.Tool{
-			tools.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
-			tools.NewDocs(resourceDocs, disableResources),
-			tools.NewQuery(dbPool),
+			tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
+			tool_docs.NewDocs(resourceDocs, disableResources),
+			tool_query.NewQuery(dbPool),
+			searchTool,
 		},
 		[]server.Prompt{
 			prompts.NewFireboltExpert(),

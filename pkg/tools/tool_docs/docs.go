@@ -1,4 +1,4 @@
-package tools
+package tool_docs
 
 import (
 	"context"
@@ -8,13 +8,13 @@ import (
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/itertools"
 	"github.com/firebolt-db/mcp-server/pkg/resources"
+	"github.com/firebolt-db/mcp-server/pkg/tools"
 )
 
-type DocsInput struct {
-	ArticlesIDs []string `json:"articles,omitempty" jsonschema:"Identifiers of the articles to fetch from Firebolt documentation"`
+type Input struct {
 }
 
-type DocsOutput struct {
+type Output struct {
 	Articles []mcp.Content `json:"articles"`
 }
 
@@ -35,14 +35,12 @@ type Docs struct {
 
 func (t *Docs) Tool() *mcp.Tool {
 	return &mcp.Tool{
-		Name:  "firebolt_docs",
-		Title: "Firebolt Documentation",
-		Description: "Returns Firebolt documentation articles. " +
-			"Use this tool whenever you asked a question about Firebolt or need to connect to and use Firebolt. " +
+		Name:  "firebolt_docs_overview",
+		Title: "Firebolt Documentation Overview",
+		Description: "Returns Firebolt documentation overview. " +
+			"Use this tool when need to get general information about Firebolt or need to connect to and use Firebolt. " +
 			"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. " +
-			"Calling this tool without any parameters will return an overview document containing essential Firebolt fundamentals, " +
-			"an index of detailed documentation articles, and a secret value expected by `firebolt_connect` tool that confirms you have read the documentation. " +
-			"To retrieve specific articles, call this tool with their corresponding IDs using the `articles` parameter.",
+			"To search for detailed information about using Firebolt, query syntax, object types etc use `firebolt_docs_search` tool",
 	}
 }
 
@@ -51,21 +49,17 @@ func (t *Docs) Register(s *mcp.Server) {
 	mcp.AddTool(s, t.Tool(), t.Handler())
 }
 
-func (t *Docs) Handler() mcp.ToolHandlerFor[DocsInput, *DocsOutput] {
-	return func(ctx context.Context, req *mcp.CallToolRequest, input DocsInput) (*mcp.CallToolResult, *DocsOutput, error) {
+func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
+	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 
 		var results []*mcp.ResourceContents // Collection of fetched documentation resources
 
-		articleIDs := input.ArticlesIDs
-
-		// Default articles to return if none specified
-		if len(articleIDs) == 0 {
-			articleIDs = append(
-				articleIDs,
-				resources.DocsArticleOverview,  // General Firebolt overview
-				resources.DocsArticleProof,     // Contains proof value for connect tool
-				resources.DocsArticleReference, // Reference documentation
-			)
+		articleIDs := []string{
+			resources.DocsArticleOverview, // General Firebolt overview
+			resources.DocsArticleProof,    // Contains proof value for connect tool
+			// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_docs_search`
+			// to get the detailed documentation.
+			// resources.DocsArticleReference, // Reference documentation
 		}
 
 		// Fetch each requested article
@@ -79,10 +73,10 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[DocsInput, *DocsOutput] {
 		}
 
 		out := itertools.Map(results, func(i *mcp.ResourceContents) mcp.Content {
-			return textOrResourceContent(t.disableResources, i)
+			return tools.TextOrResourceContent(t.disableResources, i)
 		})
 
-		return &mcp.CallToolResult{}, &DocsOutput{Articles: out}, nil
+		return &mcp.CallToolResult{}, &Output{Articles: out}, nil
 	}
 }
 
