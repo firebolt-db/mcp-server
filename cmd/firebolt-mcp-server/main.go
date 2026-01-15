@@ -118,13 +118,13 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	// Initialize logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	cfg := newConfig(cmd)
-	if err := cfg.validate(); err != nil {
+	cfg := server.NewConfig(cmd)
+	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	// Connect to Firebolt
-	err := os.Setenv("FIREBOLT_ENDPOINT", fmt.Sprintf("https://api.%s", cfg.environment))
+	err := os.Setenv("FIREBOLT_ENDPOINT", fmt.Sprintf("https://api.%s", cfg.Environment))
 	if err != nil {
 		return fmt.Errorf("failed to set FIREBOLT_ENDPOINT environment variable: %w", err)
 	}
@@ -142,8 +142,8 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	srv := server.NewServer(
 		logger,
 		fullVersion(),
-		cfg.transport,
-		cfg.transportSSEListenAddress,
+		cfg.Transport,
+		cfg.TransportSSEListenAddress,
 		tools,
 		[]server.Prompt{
 			prompts.NewFireboltExpert(),
@@ -171,15 +171,15 @@ func run(ctx context.Context, cmd *cli.Command) error {
 // - Client Secret
 // Required values for Firebolt Core:
 // - Core URL
-func getDBPool(cfg config, logger *slog.Logger) (database.Pool, func()) {
-	isCore := cfg.coreURL != ""
+func getDBPool(cfg server.Config, logger *slog.Logger) (database.Pool, func()) {
+	isCore := cfg.CoreURL != ""
 
 	// check if the configuration specifies Firebolt Core connection
 	if isCore {
-		return database.NewCorePool(logger, cfg.coreURL)
+		return database.NewCorePool(logger, cfg.CoreURL)
 	}
 
-	return database.NewPool(logger, cfg.clientID, cfg.clientSecret)
+	return database.NewPool(logger, cfg.ClientID, cfg.ClientSecret)
 }
 
 // generateRandomSecret generates a random 32-character alphanumeric string.

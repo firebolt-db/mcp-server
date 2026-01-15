@@ -19,11 +19,11 @@ import (
 
 // prepareTools prepares the tools for the server based on the provided configuration.
 // The set of the tools and their set up differs for Firebolt and Firebolt Core.
-func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, cfg config, dbPool database.Pool) ([]server.Tool, []server.ResourceTemplate, error) {
+func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, cfg server.Config, dbPool database.Pool) ([]server.Tool, []server.ResourceTemplate, error) {
 	docsProofToken := generateRandomSecret()
 
 	var docsProof *string
-	if !cfg.skipDocsProof {
+	if !cfg.SkipDocsProof {
 		docsProof = &docsProofToken
 	}
 
@@ -31,10 +31,10 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	resourceDatabases := resources.NewDatabases(dbPool)
 
 	// Firebolt Core tools
-	if cfg.coreURL != "" {
+	if cfg.CoreURL != "" {
 		tools := []server.Tool{
-			tool_connect_core.NewConnectCore(resourceDatabases, docsProof, cfg.disableResources),
-			tool_docs.NewDocs(resourceDocs, cfg.disableResources),
+			tool_connect_core.NewConnectCore(resourceDatabases, docsProof, cfg.DisableResources),
+			tool_docs.NewDocs(resourceDocs, cfg.DisableResources),
 			tool_query.NewQuery(dbPool),
 		}
 		resourceTemplates := []server.ResourceTemplate{
@@ -47,9 +47,9 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 
 	discoveryClient, err := discovery.NewClient(
 		ctx, logger,
-		cfg.clientID, cfg.clientSecret,
-		fmt.Sprintf("https://id.%s", cfg.environment),
-		fmt.Sprintf("https://api.%s/web/v3", cfg.environment),
+		cfg.ClientID, cfg.ClientSecret,
+		fmt.Sprintf("https://id.%s", cfg.Environment),
+		fmt.Sprintf("https://api.%s/web/v3", cfg.Environment),
 	)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create Firebolt discovery client: %w", err)
@@ -59,10 +59,10 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	resourceEngines := resources.NewEngines(dbPool)
 
 	searchCfg := tool_search.Config{
-		BaseURL:      fmt.Sprintf("https://api.%s", cfg.environment),
-		ClientID:     cfg.clientID,
-		ClientSecret: cfg.clientSecret,
-		TokenURL:     fmt.Sprintf("https://id.%s/oauth/token", cfg.environment),
+		BaseURL:      fmt.Sprintf("https://api.%s", cfg.Environment),
+		ClientID:     cfg.ClientID,
+		ClientSecret: cfg.ClientSecret,
+		TokenURL:     fmt.Sprintf("https://id.%s/oauth/token", cfg.Environment),
 	}
 
 	docsSearchTool, err := tool_search.NewSearch(ctx, searchCfg)
@@ -72,8 +72,8 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 
 	// Standard Firebolt tools
 	tools := []server.Tool{
-		tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, cfg.disableResources),
-		tool_docs.NewDocs(resourceDocs, cfg.disableResources),
+		tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
+		tool_docs.NewDocs(resourceDocs, cfg.DisableResources),
 		tool_query.NewQuery(dbPool),
 		docsSearchTool,
 	}
