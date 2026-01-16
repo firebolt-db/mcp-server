@@ -18,6 +18,11 @@ func EngineURI(account, engine string) string {
 	return fmt.Sprintf("firebolt://accounts/%s/engines/%s", account, engine)
 }
 
+// CoreEngineURI creates a formatted Firebolt Core engine URI for a given  engine name.
+func CoreEngineURI(engine string) string {
+	return fmt.Sprintf("firebolt://engines/%s", engine)
+}
+
 // Engines is a resource template handler for serving Firebolt engine information.
 type Engines struct {
 	dbPool database.Pool
@@ -96,6 +101,47 @@ func (r *Engines) FetchEngineResources(ctx context.Context, account, engine stri
 
 		return &mcp.ResourceContents{
 			URI:      EngineURI(account, i["engine_name"].(string)),
+			MIMEType: mimetype.JSON,
+			Text:     string(data),
+		}, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &mcp.ReadResourceResult{
+		Contents: out,
+	}, nil
+}
+
+// FetchCoreEngineResources retrieves engine information in Firebolt Core.
+func (r *Engines) FetchCoreEngineResources(ctx context.Context) (*mcp.ReadResourceResult, error) {
+
+	// Acquire a connection to the database
+	conn, err := r.dbPool.GetConnection(database.PoolParams{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire database connection: %w", err)
+	}
+
+	// Prepare the SQL query
+	sql := "SELECT engine_name, description, status, version, type, family, nodes, clusters, auto_start FROM information_schema.engines;"
+
+	// Query database
+	rows, err := conn.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query database: %w", err)
+	}
+
+	// Convert rows to resources
+	out, err := itertools.MapWithFailure(rows, func(i map[string]any) (*mcp.ResourceContents, error) {
+
+		data, err := json.Marshal(i)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal row data to JSON: %w", err)
+		}
+
+		return &mcp.ResourceContents{
+			URI:      CoreEngineURI(i["engine_name"].(string)),
 			MIMEType: mimetype.JSON,
 			Text:     string(data),
 		}, nil

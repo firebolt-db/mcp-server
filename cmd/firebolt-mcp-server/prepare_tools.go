@@ -30,21 +30,6 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
 	resourceDatabases := resources.NewDatabases(dbPool)
 
-	// Firebolt Core tools
-	if cfg.CoreURL != "" {
-		tools := []server.Tool{
-			tool_connect_core.NewConnectCore(resourceDatabases, docsProof, cfg.DisableResources),
-			tool_docs.NewDocs(resourceDocs, cfg.DisableResources),
-			tool_query.NewQuery(dbPool),
-		}
-		resourceTemplates := []server.ResourceTemplate{
-			resourceDocs,
-			resourceDatabases,
-		}
-
-		return tools, resourceTemplates, nil
-	}
-
 	discoveryClient, err := discovery.NewClient(
 		ctx, logger,
 		cfg.ClientID, cfg.ClientSecret,
@@ -56,8 +41,27 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	}
 
 	resourceAccounts := resources.NewAccounts(discoveryClient)
+	resourceCoreAccounts := resources.NewCoreAccounts(dbPool)
 	resourceEngines := resources.NewEngines(dbPool)
 
+	// Firebolt Core tools and resource templates
+	if cfg.CoreURL != "" {
+		tools := []server.Tool{
+			tool_connect_core.NewConnectCore(resourceCoreAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
+			tool_docs.NewDocs(resourceDocs, cfg.DisableResources, true),
+			tool_query.NewQuery(dbPool),
+		}
+		resourceTemplates := []server.ResourceTemplate{
+			resourceDocs,
+			resourceAccounts,
+			resourceDatabases,
+			resourceEngines,
+		}
+
+		return tools, resourceTemplates, nil
+	}
+
+	// Firebolt SaaS tools and resource templates
 	searchCfg := tool_search.Config{
 		BaseURL:      fmt.Sprintf("https://api.%s", cfg.Environment),
 		ClientID:     cfg.ClientID,
@@ -73,7 +77,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	// Standard Firebolt tools
 	tools := []server.Tool{
 		tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
-		tool_docs.NewDocs(resourceDocs, cfg.DisableResources),
+		tool_docs.NewDocs(resourceDocs, cfg.DisableResources, false),
 		tool_query.NewQuery(dbPool),
 		docsSearchTool,
 	}

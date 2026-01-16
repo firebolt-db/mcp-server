@@ -308,3 +308,91 @@ func TestEngines_FetchEngineResources(t *testing.T) {
 		})
 	}
 }
+
+func TestEngines_FetchCoreEngineResources(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockSetup     func(*databasemock.PoolMock, *databasemock.ConnectionMock)
+		expected      []map[string]any
+		expectedError string
+	}{
+		{
+			name: "fetch all engines",
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					assert.Equal(t, "SELECT engine_name, description, status, version, type, family, nodes, clusters, auto_start FROM information_schema.engines;", sql)
+					assert.Empty(t, args)
+					return []map[string]any{
+						{
+							"engine_name": "engine-1",
+							"status":      "running",
+						},
+						{
+							"engine_name": "engine-2",
+							"status":      "stopped",
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expected: []map[string]any{
+				{
+					"engine_name": "engine-1",
+					"status":      "running",
+				},
+				{
+					"engine_name": "engine-2",
+					"status":      "stopped",
+				},
+			},
+		},
+		{
+			name: "json marshaling error",
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					return []map[string]any{
+						{
+							"engine_name": make(chan int), // Channels are not JSON-serializable
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expectedError: "failed to marshal row data to JSON",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pool := databasemock.NewPoolMock()
+			conn := databasemock.NewConnectionMock()
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(pool, conn)
+			}
+
+			engines := resources.NewEngines(pool)
+
+			result, err := engines.FetchCoreEngineResources(t.Context())
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, result.Contents, len(tt.expected))
+
+			for i, res := range result.Contents {
+				var data map[string]any
+				err := json.Unmarshal([]byte(res.Text), &data)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expected[i], data)
+				assert.Equal(t, resources.CoreEngineURI(data["engine_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
+			}
+		})
+	}
+}

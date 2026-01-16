@@ -24,7 +24,7 @@ func TestDocs_ResourceTemplate(t *testing.T) {
 	assert.NotEmpty(t, template.Description)
 }
 
-func TestDocs_Handler(t *testing.T) {
+func TestDocs_Handler_No(t *testing.T) {
 
 	mockFS := newMockDocsFS()
 	docs := resources.NewDocs(mockFS, "test-proof")
@@ -44,6 +44,25 @@ func TestDocs_Handler(t *testing.T) {
 		require.Len(t, result.Contents, 1)
 		resource := result.Contents[0]
 		assert.Equal(t, resources.DocsURI(resources.DocsArticleOverview), resource.URI)
+		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
+		assert.Contains(t, resource.Text, "Foundational Knowledge Layer", "should contain the Foundational Knowledge Layer")
+	})
+
+	t.Run("fetch core overview article", func(t *testing.T) {
+
+		request := &mcp.ReadResourceRequest{
+			Params: &mcp.ReadResourceParams{
+				Meta: map[string]any{
+					"article": resources.DocsCoreArticleOverview,
+				},
+			},
+		}
+
+		result, err := docs.Handler(t.Context(), request)
+		assert.NoError(t, err)
+		require.Len(t, result.Contents, 1)
+		resource := result.Contents[0]
+		assert.Equal(t, resources.DocsURI(resources.DocsCoreArticleOverview), resource.URI)
 		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
 		assert.Contains(t, resource.Text, "Foundational Knowledge Layer", "should contain the Foundational Knowledge Layer")
 	})

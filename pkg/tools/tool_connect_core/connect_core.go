@@ -18,6 +18,13 @@ type Output struct {
 	Results []mcp.Content `json:"results"`
 }
 
+// CoreAccountResourcesFetcher defines the interface for retrieving account resources.
+// Implementations should provide methods to fetch Firebolt account information.
+type CoreAccountResourcesFetcher interface {
+	// FetchAccountResources retrieves account information for all available accounts.
+	FetchAccountResources(ctx context.Context) (*mcp.ReadResourceResult, error)
+}
+
 // CoreDatabaseResourcesFetcher defines the interface for retrieving database resources in Firebolt Core.
 // Implementations should provide methods to fetch Firebolt database information in Firebolt Core.
 type CoreDatabaseResourcesFetcher interface {
@@ -25,10 +32,19 @@ type CoreDatabaseResourcesFetcher interface {
 	FetchCoreDatabaseResources(ctx context.Context) (*mcp.ReadResourceResult, error)
 }
 
+// EngineResourcesFetcher defines the interface for retrieving engine resources.
+// Implementations should provide methods to fetch Firebolt engine information within an account.
+type EngineResourcesFetcher interface {
+	// FetchCoreEngineResources retrieves engine information in a Firebolt Core instance.
+	FetchCoreEngineResources(ctx context.Context) (*mcp.ReadResourceResult, error)
+}
+
 // ConnectCore represents a tool for fetching and returning Firebolt resource information.
 // It provides hierarchical databases in the Firebolt Core system.
 type ConnectCore struct {
+	accountsFetcher  CoreAccountResourcesFetcher
 	databasesFetcher CoreDatabaseResourcesFetcher // Fetches database resources
+	enginesFetcher   EngineResourcesFetcher       // Fetches engine resources
 	docsProof        *string                      // Shared with the docs resources
 	disableResources bool                         // Return text content instead of embedded resources
 }
@@ -36,12 +52,16 @@ type ConnectCore struct {
 // NewConnectCore creates a new instance of the Connect tool with the provided resource fetchers.
 // It requires implementation for fetching databases.
 func NewConnectCore(
+	accountsFetcher CoreAccountResourcesFetcher,
 	databasesFetcher CoreDatabaseResourcesFetcher,
+	enginesFetcher EngineResourcesFetcher,
 	docsProof *string,
 	disableResources bool,
 ) *ConnectCore {
 	return &ConnectCore{
+		accountsFetcher:  accountsFetcher,
 		databasesFetcher: databasesFetcher,
+		enginesFetcher:   enginesFetcher,
 		docsProof:        docsProof,
 		disableResources: disableResources,
 	}
@@ -73,13 +93,30 @@ func (t *ConnectCore) Handler() mcp.ToolHandlerFor[Input, *Output] {
 				"you need to call `firebolt_docs_overview` tool first and extract value from this parameter from the response")
 		}
 
-		// Fetch all databases for the account
+		resources := []*mcp.ResourceContents{}
+
+		// Fetch all accounts
+		accounts, err := t.accountsFetcher.FetchAccountResources(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to discover account resources: %w", err)
+		}
+		resources = append(resources, accounts.Contents...)
+
+		// Fetch all databases
 		databases, err := t.databasesFetcher.FetchCoreDatabaseResources(ctx)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to discover database resources: %w", err)
 		}
+		resources = append(resources, databases.Contents...)
 
-		out := itertools.Map(databases.Contents, func(i *mcp.ResourceContents) mcp.Content {
+		// Fetch all engines
+		engines, err := t.enginesFetcher.FetchCoreEngineResources(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to discover engine resources: %w", err)
+		}
+		resources = append(resources, engines.Contents...)
+
+		out := itertools.Map(resources, func(i *mcp.ResourceContents) mcp.Content {
 			return tools.TextOrResourceContent(t.disableResources, i)
 		})
 
