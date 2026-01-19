@@ -34,6 +34,8 @@ type Docs struct {
 	isCore           bool                 // Flag indicating whether the tool is for Firebolt Core or Firebolt SaaS
 }
 
+// Tool returns the mcp.Tool definition for the Docs tool.
+// This defines how the tool is represented in the MCP system.
 func (t *Docs) Tool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:  "firebolt_docs_overview",

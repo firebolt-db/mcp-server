@@ -19,7 +19,7 @@ import (
 )
 
 // prepareTools prepares the tools for the server based on the provided configuration.
-// The set of the tools and their set up differs for Firebolt and Firebolt Core.
+// The set of the tools and their setup differ for Firebolt and Firebolt Core.
 func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, cfg server.Config, dbPool database.Pool) ([]server.Tool, []server.ResourceTemplate, error) {
 	docsProofToken := generateRandomSecret()
 

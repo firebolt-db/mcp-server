@@ -21,16 +21,20 @@ func LLMDocsURI(url string) string {
 	return fmt.Sprintf("firebolt://llm_docs/%s", url)
 }
 
+// LLMDocs is a resource template handler for serving Firebolt documentation articles for LLMs.
 type LLMDocs struct {
 	httpClient *http.Client
 }
 
+// NewLLMDocs creates and returns a new instance of the DocsLLM.
 func NewLLMDocs() *LLMDocs {
 	return &LLMDocs{
 		httpClient: &http.Client{}, // In the future we may want to add a caching transport to this client
 	}
 }
 
+// ResourceTemplate defines the template for LLM documentation resources.
+// It specifies the URI format, content type, description, and suggested usage.
 func (r *LLMDocs) ResourceTemplate() *mcp.ResourceTemplate {
 	return &mcp.ResourceTemplate{
 		URITemplate: LLMDocsURI("{url}"),
@@ -56,6 +60,8 @@ func (r *LLMDocs) Handler(ctx context.Context, request *mcp.ReadResourceRequest)
 	return r.FetchLLMDocsResources(ctx, &value)
 }
 
+// FetchLLMDocsResources retrieves the content for a specified documentation article.
+// If the provided articleURL is nil, it returns the documentation index.
 func (r *LLMDocs) FetchLLMDocsResources(ctx context.Context, articleURL *string) (*mcp.ReadResourceResult, error) {
 	if articleURL == nil {
 		return r.fetchArticle(ctx, llmsIndexURL)

@@ -34,6 +34,8 @@ type DocsLLM struct {
 	docsFetcher      LLMDocsResourcesFetcher
 }
 
+// Tool returns the mcp.Tool definition for the DocsLLM tool.
+// This defines how the tool is represented in the MCP system.
 func (t *DocsLLM) Tool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:  "firebolt_docs_llm",
@@ -44,11 +46,13 @@ func (t *DocsLLM) Tool() *mcp.Tool {
 	}
 }
 
-// Register adds the Docs tool to the provided MCP server instance.
+// Register adds the DocsLLM tool to the provided MCP server instance.
 func (t *DocsLLM) Register(s *mcp.Server) {
 	mcp.AddTool(s, t.Tool(), t.Handler())
 }
 
+// Handler processes tool invocation requests and returns the requested documentation article.
+// It fetches documentation in Markdown format from docs prepared specifically for LLMs.
 func (t *DocsLLM) Handler() mcp.ToolHandlerFor[Input, *Output] {
 	return func(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, *Output, error) {
 
