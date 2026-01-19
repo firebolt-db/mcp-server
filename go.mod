@@ -1,9 +1,10 @@
 module github.com/firebolt-db/mcp-server
 
-go 1.24.1
+go 1.25
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
+	github.com/bartventer/httpcache v0.12.0
 	github.com/firebolt-db/firebolt-go-sdk v1.13.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gocolly/colly/v2 v2.3.0

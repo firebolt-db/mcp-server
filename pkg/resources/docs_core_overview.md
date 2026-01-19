@@ -1,3 +1,6 @@
+# Important note
+You are on Firebolt Core! This means that you should pay attention to the differences between Firebolt Core and Managed Firebolt, as several functions, for instance information_schema objects are not available or behave differently.
+
 # Firebolt Core Foundational Knowledge Layer
 
 This document provides a foundational overview of Firebolt Core, designed to help an LLM learn its specific architecture, concepts, and capabilities. Firebolt Core is a version of Firebolt that can be rolled out locally or in self-managed environments, with some differences and limitations compared to the managed Firebolt SaaS solution.
@@ -175,4 +178,3 @@ The following statements commonly used in Managed Firebolt are **unavailable** i
 
 ---
 
-Important note: you are on Firebolt Core! This means that you should pay attention to the differences between Firebolt Core and Managed Firebolt, as several functions, for instance information_schema objects are not available or behave differently.

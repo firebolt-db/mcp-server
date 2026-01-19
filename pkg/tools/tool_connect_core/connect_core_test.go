@@ -86,7 +86,7 @@ func TestConnectCore_Tool(t *testing.T) {
 
 	tool := connectTool.Tool()
 	assert.Equal(t, "firebolt_connect_core", tool.Name)
-	assert.Contains(t, tool.Description, "Returns a list of Firebolt databases")
+	assert.Contains(t, tool.Description, "Returns a list of databases you have access to in Firebolt Core")
 }
 
 func TestConnectCore_Handler_Success_RequireProof(t *testing.T) {

@@ -13,6 +13,7 @@ import (
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect_core"
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs_llm"
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
 	"github.com/firebolt-db/mcp-server/pkg/tools/tool_search"
 )
@@ -28,7 +29,9 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	}
 
 	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
+	resourceLLMDocs := resources.NewLLMDocs()
 	resourceDatabases := resources.NewDatabases(dbPool)
+	resourceEngines := resources.NewEngines(dbPool)
 
 	discoveryClient, err := discovery.NewClient(
 		ctx, logger,
@@ -42,13 +45,13 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 
 	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceCoreAccounts := resources.NewCoreAccounts(dbPool)
-	resourceEngines := resources.NewEngines(dbPool)
 
 	// Firebolt Core tools and resource templates
 	if cfg.CoreURL != "" {
 		tools := []server.Tool{
 			tool_connect_core.NewConnectCore(resourceCoreAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
 			tool_docs.NewDocs(resourceDocs, cfg.DisableResources, true),
+			tool_docs_llm.NewDocsLLM(resourceLLMDocs, cfg.DisableResources),
 			tool_query.NewQuery(dbPool),
 		}
 		resourceTemplates := []server.ResourceTemplate{
@@ -56,6 +59,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 			resourceAccounts,
 			resourceDatabases,
 			resourceEngines,
+			resourceLLMDocs,
 		}
 
 		return tools, resourceTemplates, nil

@@ -24,7 +24,7 @@ func TestDocs_ResourceTemplate(t *testing.T) {
 	assert.NotEmpty(t, template.Description)
 }
 
-func TestDocs_Handler_No(t *testing.T) {
+func TestDocs_Handler(t *testing.T) {
 
 	mockFS := newMockDocsFS()
 	docs := resources.NewDocs(mockFS, "test-proof")
