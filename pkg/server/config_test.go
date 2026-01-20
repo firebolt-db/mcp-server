@@ -39,6 +39,7 @@ func TestConfig(t *testing.T) {
 		},
 		"missing transport SSE listen address": {
 			setup: func(c *server.Config) {
+				c.Transport = "sse"
 				c.TransportSSEListenAddress = ""
 			},
 		},

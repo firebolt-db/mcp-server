@@ -56,7 +56,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 		}
 		resourceTemplates := []server.ResourceTemplate{
 			resourceDocs,
-			resourceAccounts,
+			resourceCoreAccounts,
 			resourceDatabases,
 			resourceEngines,
 			resourceLLMDocs,

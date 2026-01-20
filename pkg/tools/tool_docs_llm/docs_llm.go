@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	_ "github.com/bartventer/httpcache/store/memcache"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/firebolt-db/mcp-server/pkg/helpers/itertools"
@@ -42,7 +41,7 @@ func (t *DocsLLM) Tool() *mcp.Tool {
 		Title: "Firebolt Documentation Index and Retrieval for LLMs",
 		Description: "Returns Firebolt documentation articles prepared to be used by LLMs. " +
 			"Use this tool without parameters to list index of all Firebolt documentation articles. " +
-			"Use this tools with a an article URL to retrieve specific documentation article.",
+			"Use this tool with an article URL to retrieve a specific documentation article.",
 	}
 }
 

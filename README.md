@@ -158,7 +158,7 @@ To integrate with Claude Desktop using **Docker**:
             "ghcr.io/firebolt-db/mcp-server:0.5.0"
           ],
           "env": {
-            "FIREBOLT_MCP_CORE_URL": "https://localhost:3473"
+            "FIREBOLT_MCP_CORE_URL": "http://localhost:3473"
           }
         }
       }
