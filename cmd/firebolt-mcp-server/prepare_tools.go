@@ -33,17 +33,6 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	resourceDatabases := resources.NewDatabases(dbPool)
 	resourceEngines := resources.NewEngines(dbPool)
 
-	discoveryClient, err := discovery.NewClient(
-		ctx, logger,
-		cfg.ClientID, cfg.ClientSecret,
-		fmt.Sprintf("https://id.%s", cfg.Environment),
-		fmt.Sprintf("https://api.%s/web/v3", cfg.Environment),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create Firebolt discovery client: %w", err)
-	}
-
-	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceCoreAccounts := resources.NewCoreAccounts(dbPool)
 
 	// Firebolt Core tools and resource templates
@@ -64,6 +53,18 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 
 		return tools, resourceTemplates, nil
 	}
+
+	discoveryClient, err := discovery.NewClient(
+		ctx, logger,
+		cfg.ClientID, cfg.ClientSecret,
+		fmt.Sprintf("https://id.%s", cfg.Environment),
+		fmt.Sprintf("https://api.%s/web/v3", cfg.Environment),
+	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create Firebolt discovery client: %w", err)
+	}
+
+	resourceAccounts := resources.NewAccounts(discoveryClient)
 
 	// Firebolt SaaS tools and resource templates
 	searchCfg := tool_search.Config{
