@@ -49,7 +49,7 @@ A Model Context Protocol implementation that connects your LLM to Firebolt Data 
 
 Before you start, ensure you have either:
 - A Firebolt [service account](https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html) with a client ID and client secret.
-- A Firebolt Core instance URL.
+- A [Firebolt Core](https://www.firebolt.io/core) instance URL.
 
 ### Installing the MCP Server
 
