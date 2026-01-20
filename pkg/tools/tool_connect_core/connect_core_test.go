@@ -27,7 +27,7 @@ func (m *MockResourceFetcher) FetchAccountResources(ctx context.Context) (*mcp.R
 	return m.AccountsFunc(ctx)
 }
 
-func (m *MockResourceFetcher) FetchCoreDatabaseResources(ctx context.Context) (*mcp.ReadResourceResult, error) {
+func (m *MockResourceFetcher) FetchDatabaseResources(ctx context.Context, _, _ string) (*mcp.ReadResourceResult, error) {
 	return m.DatabasesFunc(ctx)
 }
 

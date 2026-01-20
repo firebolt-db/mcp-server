@@ -84,17 +84,27 @@ func TestCoreDatabaseURI(t *testing.T) {
 
 func TestNewDatabases(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	databases := resources.NewDatabases(pool)
+	databases := resources.NewDatabases(pool, false)
 	assert.NotNil(t, databases)
 }
 
-func TestDatabases_ResourceTemplate(t *testing.T) {
+func TestDatabases_ResourceTemplate_SaaS(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	databases := resources.NewDatabases(pool)
-	assert.NotEmpty(t, databases.ResourceTemplate())
+	databases := resources.NewDatabases(pool, false)
+	resourceTemplate := databases.ResourceTemplate()
+	require.NotEmpty(t, resourceTemplate)
+	assert.Equal(t, "firebolt://accounts/{account}/databases/{database}", resourceTemplate.URITemplate)
 }
 
-func TestDatabases_Handler(t *testing.T) {
+func TestDatabases_ResourceTemplate_Core(t *testing.T) {
+	pool := databasemock.NewPoolMock()
+	databases := resources.NewDatabases(pool, true)
+	resourceTemplate := databases.ResourceTemplate()
+	require.NotEmpty(t, resourceTemplate)
+	assert.Equal(t, "firebolt://databases/{database}", resourceTemplate.URITemplate)
+}
+
+func TestDatabases_Handler_SaaS(t *testing.T) {
 	tests := []struct {
 		name          string
 		params        map[string]any
@@ -181,7 +191,7 @@ func TestDatabases_Handler(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool)
+			databases := resources.NewDatabases(pool, false)
 
 			request := &mcp.ReadResourceRequest{
 				Params: &mcp.ReadResourceParams{
@@ -213,7 +223,111 @@ func TestDatabases_Handler(t *testing.T) {
 	}
 }
 
-func TestDatabases_FetchDatabaseResources(t *testing.T) {
+func TestDatabases_Handler_Core(t *testing.T) {
+	tests := []struct {
+		name          string
+		params        map[string]any
+		mockSetup     func(*databasemock.PoolMock, *databasemock.ConnectionMock)
+		expected      []map[string]any
+		expectedError string
+	}{
+		{
+			name: "successful request",
+			params: map[string]any{
+				"account":  "test-account",
+				"database": "test-database",
+			},
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					assert.Equal(t, "SELECT database_name, description FROM information_schema.databases;", sql)
+					assert.Nil(t, args)
+					return []map[string]any{
+						{
+							"database_name": "test-database",
+							"description":   "Test database description",
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expected: []map[string]any{
+				{
+					"database_name": "test-database",
+					"description":   "Test database description",
+				},
+			},
+		},
+		{
+			name: "database connection error",
+			params: map[string]any{
+				"account":  "test-account",
+				"database": "test-database",
+			},
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				pool.WithGetConnectionFunc(func(params database.PoolParams) (database.Connection, error) {
+					return nil, errors.New("connection error")
+				})
+			},
+			expectedError: "failed to acquire database connection: connection error",
+		},
+		{
+			name: "query execution error",
+			params: map[string]any{
+				"account":  "test-account",
+				"database": "test-database",
+			},
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					return nil, errors.New("query error")
+				})
+				pool.RegisterConnection(database.PoolParams{AccountName: "test-account"}, conn)
+			},
+			expectedError: "failed to query database: query error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pool := databasemock.NewPoolMock()
+			conn := databasemock.NewConnectionMock()
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(pool, conn)
+			}
+
+			databases := resources.NewDatabases(pool, true)
+
+			request := &mcp.ReadResourceRequest{
+				Params: &mcp.ReadResourceParams{
+					Meta: tt.params,
+				},
+			}
+
+			result, err := databases.Handler(t.Context(), request)
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, result.Contents, len(tt.expected))
+
+			for i, res := range result.Contents {
+				var data map[string]any
+				err := json.Unmarshal([]byte(res.Text), &data)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expected[i], data)
+				assert.Equal(t, resources.CoreDatabaseURI(data["database_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
+			}
+		})
+	}
+}
+
+func TestDatabases_FetchDatabaseResources_SaaS(t *testing.T) {
 	tests := []struct {
 		name          string
 		account       string
@@ -308,7 +422,7 @@ func TestDatabases_FetchDatabaseResources(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool)
+			databases := resources.NewDatabases(pool, false)
 
 			result, err := databases.FetchDatabaseResources(t.Context(), tt.account, tt.database)
 
@@ -334,7 +448,7 @@ func TestDatabases_FetchDatabaseResources(t *testing.T) {
 	}
 }
 
-func TestDatabases_FetchCoreDatabaseResources(t *testing.T) {
+func TestDatabases_FetchDatabaseResources_Core(t *testing.T) {
 	tests := []struct {
 		name          string
 		mockSetup     func(*databasemock.PoolMock, *databasemock.ConnectionMock)
@@ -387,9 +501,9 @@ func TestDatabases_FetchCoreDatabaseResources(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool)
+			databases := resources.NewDatabases(pool, true)
 
-			result, err := databases.FetchCoreDatabaseResources(t.Context())
+			result, err := databases.FetchDatabaseResources(t.Context(), "", "")
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

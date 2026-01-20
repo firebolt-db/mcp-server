@@ -25,11 +25,11 @@ type CoreAccountResourcesFetcher interface {
 	FetchAccountResources(ctx context.Context) (*mcp.ReadResourceResult, error)
 }
 
-// CoreDatabaseResourcesFetcher defines the interface for retrieving database resources in Firebolt Core.
+// DatabaseResourcesFetcher defines the interface for retrieving database resources in Firebolt Core.
 // Implementations should provide methods to fetch Firebolt database information in Firebolt Core.
-type CoreDatabaseResourcesFetcher interface {
-	// FetchCoreDatabaseResources retrieves database information in a Firebolt Core instance.
-	FetchCoreDatabaseResources(ctx context.Context) (*mcp.ReadResourceResult, error)
+type DatabaseResourcesFetcher interface {
+	// FetchDatabaseResources retrieves database information in a Firebolt Core instance.
+	FetchDatabaseResources(ctx context.Context, _ string, _ string) (*mcp.ReadResourceResult, error)
 }
 
 // EngineResourcesFetcher defines the interface for retrieving engine resources.
@@ -43,17 +43,17 @@ type EngineResourcesFetcher interface {
 // It provides hierarchical databases in the Firebolt Core system.
 type ConnectCore struct {
 	accountsFetcher  CoreAccountResourcesFetcher
-	databasesFetcher CoreDatabaseResourcesFetcher // Fetches database resources
-	enginesFetcher   EngineResourcesFetcher       // Fetches engine resources
-	docsProof        *string                      // Shared with the docs resources
-	disableResources bool                         // Return text content instead of embedded resources
+	databasesFetcher DatabaseResourcesFetcher // Fetches database resources
+	enginesFetcher   EngineResourcesFetcher   // Fetches engine resources
+	docsProof        *string                  // Shared with the docs resources
+	disableResources bool                     // Return text content instead of embedded resources
 }
 
 // NewConnectCore creates a new instance of the Connect tool with the provided resource fetchers.
 // It requires implementation for fetching databases.
 func NewConnectCore(
 	accountsFetcher CoreAccountResourcesFetcher,
-	databasesFetcher CoreDatabaseResourcesFetcher,
+	databasesFetcher DatabaseResourcesFetcher,
 	enginesFetcher EngineResourcesFetcher,
 	docsProof *string,
 	disableResources bool,
@@ -103,7 +103,7 @@ func (t *ConnectCore) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		resources = append(resources, accounts.Contents...)
 
 		// Fetch all databases
-		databases, err := t.databasesFetcher.FetchCoreDatabaseResources(ctx)
+		databases, err := t.databasesFetcher.FetchDatabaseResources(ctx, "", "")
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to discover database resources: %w", err)
 		}

@@ -28,15 +28,16 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 		docsProof = &docsProofToken
 	}
 
+	// resources shared between Firebolt and Firebolt Core
 	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
-	resourceLLMDocs := resources.NewLLMDocs()
-	resourceDatabases := resources.NewDatabases(dbPool)
 	resourceEngines := resources.NewEngines(dbPool)
-
-	resourceCoreAccounts := resources.NewCoreAccounts(dbPool)
 
 	// Firebolt Core tools and resource templates
 	if cfg.CoreURL != "" {
+		resourceLLMDocs := resources.NewLLMDocs()
+		resourceDatabases := resources.NewDatabases(dbPool, true)
+		resourceCoreAccounts := resources.NewCoreAccounts(dbPool)
+
 		tools := []server.Tool{
 			tool_connect_core.NewConnectCore(resourceCoreAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
 			tool_docs.NewDocs(resourceDocs, cfg.DisableResources, true),
@@ -65,6 +66,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	}
 
 	resourceAccounts := resources.NewAccounts(discoveryClient)
+	resourceDatabases := resources.NewDatabases(dbPool, false)
 
 	// Firebolt SaaS tools and resource templates
 	searchCfg := tool_search.Config{
