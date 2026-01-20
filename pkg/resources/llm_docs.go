@@ -65,9 +65,9 @@ func (r *LLMDocs) Handler(ctx context.Context, request *mcp.ReadResourceRequest)
 func (r *LLMDocs) FetchLLMDocsResources(ctx context.Context, articleURL *string) (*mcp.ReadResourceResult, error) {
 	if articleURL == nil {
 		return r.fetchArticle(ctx, llmsIndexURL)
-	} else {
-		return r.fetchArticle(ctx, *articleURL)
 	}
+
+	return r.fetchArticle(ctx, *articleURL)
 }
 
 func (r *LLMDocs) fetchArticle(ctx context.Context, articleURL string) (*mcp.ReadResourceResult, error) {

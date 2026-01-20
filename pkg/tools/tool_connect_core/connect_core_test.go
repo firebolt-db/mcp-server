@@ -389,7 +389,7 @@ func TestConnectCore_Handler_DisableResources(t *testing.T) {
 	assert.Len(t, out.Results, expectedCount)
 
 	// Verify the content contains text content instead of embedded resources
-	for _, content := range result.Content {
+	for _, content := range out.Results {
 		textContent, ok := content.(*mcp.TextContent)
 		require.True(t, ok, "Expected TextContent when disableResources is true")
 		assert.NotEmpty(t, textContent.Text)

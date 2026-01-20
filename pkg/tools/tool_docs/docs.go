@@ -60,9 +60,9 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		articleIDs := []string{}
 
 		if t.isCore {
-			articleIDs = append(articleIDs, resources.DocsCoreArticleOverview) // General Firebolt Core overview)
+			articleIDs = append(articleIDs, resources.DocsCoreArticleOverview) // General Firebolt Core overview
 		} else {
-			articleIDs = append(articleIDs, resources.DocsArticleOverview) // General Firebolt overview)
+			articleIDs = append(articleIDs, resources.DocsArticleOverview) // General Firebolt overview
 		}
 
 		articleIDs = append(articleIDs, resources.DocsArticleProof) // Contains proof value for connect tool

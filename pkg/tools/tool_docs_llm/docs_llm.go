@@ -3,7 +3,6 @@ package tool_docs_llm
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -29,7 +28,6 @@ type LLMDocsResourcesFetcher interface {
 
 type DocsLLM struct {
 	disableResources bool // Return text content instead of embedded resources
-	httpClient       *http.Client
 	docsFetcher      LLMDocsResourcesFetcher
 }
 
@@ -78,6 +76,5 @@ func NewDocsLLM(docsFetcher LLMDocsResourcesFetcher, disableResources bool) *Doc
 	return &DocsLLM{
 		docsFetcher:      docsFetcher,
 		disableResources: disableResources,
-		httpClient:       &http.Client{}, // In the future we may want to add a caching transport to this client
 	}
 }

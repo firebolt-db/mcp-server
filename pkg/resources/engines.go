@@ -18,7 +18,7 @@ func EngineURI(account, engine string) string {
 	return fmt.Sprintf("firebolt://accounts/%s/engines/%s", account, engine)
 }
 
-// CoreEngineURI creates a formatted Firebolt Core engine URI for a given  engine name.
+// CoreEngineURI creates a formatted Firebolt Core engine URI for a given engine name.
 func CoreEngineURI(engine string) string {
 	return fmt.Sprintf("firebolt://engines/%s", engine)
 }
