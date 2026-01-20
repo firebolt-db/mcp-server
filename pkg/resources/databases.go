@@ -77,6 +77,8 @@ func (r *Databases) Handler(ctx context.Context, request *mcp.ReadResourceReques
 // FetchDatabaseResources retrieves database information from the Firebolt service.
 // If a specific database is specified, it filters for that database; otherwise, it returns all databases.
 func (r *Databases) FetchDatabaseResources(ctx context.Context, account, dbName string) (*mcp.ReadResourceResult, error) {
+
+	// for core call dedicated resource fetcher
 	if r.isCore {
 		return r.fetchCoreDatabaseResources(ctx)
 	}
