@@ -118,7 +118,17 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	// Initialize logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	cfg := server.NewConfig(cmd)
+	cfg := server.Config{
+		Transport:                 cmd.String("transport"),
+		TransportSSEListenAddress: cmd.String("transport-sse-listen-address"),
+		DisableResources:          cmd.Bool("disable-resources"),
+		ClientID:                  cmd.String("client-id"),
+		ClientSecret:              cmd.String("client-secret"),
+		Environment:               cmd.String("environment"),
+		CoreURL:                   cmd.String("core-url"),
+		SkipDocsProof:             cmd.Bool("skip-docs-proof"),
+	}
+
 	if err := cfg.Validate(); err != nil {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
