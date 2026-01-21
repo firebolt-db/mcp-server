@@ -29,10 +29,15 @@ type Databases struct {
 }
 
 // NewDatabases creates and returns a new instance of the Databases resource handler.
-func NewDatabases(dbPool database.Pool, isCore bool) *Databases {
+func NewDatabases(dbPool database.Pool, opts ...resourceOption) *Databases {
+	optSet := resourceOptionSet{}
+	for _, opt := range opts {
+		opt(&optSet)
+	}
+
 	return &Databases{
 		dbPool: dbPool,
-		isCore: isCore,
+		isCore: optSet.isCore,
 	}
 }
 

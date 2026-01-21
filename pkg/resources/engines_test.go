@@ -84,13 +84,13 @@ func TestCoreEngineURI(t *testing.T) {
 
 func TestNewEngines(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	engines := resources.NewEngines(pool, false)
+	engines := resources.NewEngines(pool)
 	assert.NotNil(t, engines)
 }
 
 func TestEngines_ResourceTemplate_SaaS(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	engines := resources.NewEngines(pool, false)
+	engines := resources.NewEngines(pool)
 	resourceTemplate := engines.ResourceTemplate()
 	require.NotEmpty(t, resourceTemplate)
 	assert.Equal(t, "firebolt://accounts/{account}/engines/{engine}", resourceTemplate.URITemplate)
@@ -98,7 +98,7 @@ func TestEngines_ResourceTemplate_SaaS(t *testing.T) {
 
 func TestEngines_ResourceTemplate_Core(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	engines := resources.NewEngines(pool, true)
+	engines := resources.NewEngines(pool, resources.WithCore())
 	resourceTemplate := engines.ResourceTemplate()
 	require.NotEmpty(t, resourceTemplate)
 	assert.Equal(t, "firebolt://engines/{engine}", resourceTemplate.URITemplate)
@@ -193,7 +193,7 @@ func TestEngines_Handler_SaaS(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			engines := resources.NewEngines(pool, false)
+			engines := resources.NewEngines(pool)
 
 			request := &mcp.ReadResourceRequest{
 				Params: &mcp.ReadResourceParams{
@@ -295,7 +295,7 @@ func TestEngines_Handler_Core(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			engines := resources.NewEngines(pool, true)
+			engines := resources.NewEngines(pool, resources.WithCore())
 
 			request := &mcp.ReadResourceRequest{
 				Params: &mcp.ReadResourceParams{
@@ -426,7 +426,7 @@ func TestEngines_FetchEngineResources_SaaS(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			engines := resources.NewEngines(pool, false)
+			engines := resources.NewEngines(pool)
 
 			result, err := engines.FetchEngineResources(t.Context(), tt.account, tt.engine)
 
@@ -514,7 +514,7 @@ func TestEngines_FetchEngineResources_Core(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			engines := resources.NewEngines(pool, true)
+			engines := resources.NewEngines(pool, resources.WithCore())
 
 			result, err := engines.FetchEngineResources(t.Context(), "", "")
 

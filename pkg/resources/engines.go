@@ -30,10 +30,15 @@ type Engines struct {
 }
 
 // NewEngines creates and returns a new instance of the Engines resource handler.
-func NewEngines(dbPool database.Pool, isCore bool) *Engines {
+func NewEngines(dbPool database.Pool, opts ...resourceOption) *Engines {
+	optSet := resourceOptionSet{}
+	for _, opt := range opts {
+		opt(&optSet)
+	}
+
 	return &Engines{
 		dbPool: dbPool,
-		isCore: isCore,
+		isCore: optSet.isCore,
 	}
 }
 

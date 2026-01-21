@@ -84,13 +84,13 @@ func TestCoreDatabaseURI(t *testing.T) {
 
 func TestNewDatabases(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	databases := resources.NewDatabases(pool, false)
+	databases := resources.NewDatabases(pool)
 	assert.NotNil(t, databases)
 }
 
 func TestDatabases_ResourceTemplate_SaaS(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	databases := resources.NewDatabases(pool, false)
+	databases := resources.NewDatabases(pool)
 	resourceTemplate := databases.ResourceTemplate()
 	require.NotEmpty(t, resourceTemplate)
 	assert.Equal(t, "firebolt://accounts/{account}/databases/{database}", resourceTemplate.URITemplate)
@@ -98,7 +98,7 @@ func TestDatabases_ResourceTemplate_SaaS(t *testing.T) {
 
 func TestDatabases_ResourceTemplate_Core(t *testing.T) {
 	pool := databasemock.NewPoolMock()
-	databases := resources.NewDatabases(pool, true)
+	databases := resources.NewDatabases(pool, resources.WithCore())
 	resourceTemplate := databases.ResourceTemplate()
 	require.NotEmpty(t, resourceTemplate)
 	assert.Equal(t, "firebolt://databases/{database}", resourceTemplate.URITemplate)
@@ -191,7 +191,7 @@ func TestDatabases_Handler_SaaS(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool, false)
+			databases := resources.NewDatabases(pool)
 
 			request := &mcp.ReadResourceRequest{
 				Params: &mcp.ReadResourceParams{
@@ -295,7 +295,7 @@ func TestDatabases_Handler_Core(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool, true)
+			databases := resources.NewDatabases(pool, resources.WithCore())
 
 			request := &mcp.ReadResourceRequest{
 				Params: &mcp.ReadResourceParams{
@@ -422,7 +422,7 @@ func TestDatabases_FetchDatabaseResources_SaaS(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool, false)
+			databases := resources.NewDatabases(pool)
 
 			result, err := databases.FetchDatabaseResources(t.Context(), tt.account, tt.database)
 
@@ -501,7 +501,7 @@ func TestDatabases_FetchDatabaseResources_Core(t *testing.T) {
 				tt.mockSetup(pool, conn)
 			}
 
-			databases := resources.NewDatabases(pool, true)
+			databases := resources.NewDatabases(pool, resources.WithCore())
 
 			result, err := databases.FetchDatabaseResources(t.Context(), "", "")
 

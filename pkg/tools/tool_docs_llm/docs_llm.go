@@ -39,7 +39,7 @@ func (t *DocsLLM) Tool() *mcp.Tool {
 		Title: "Firebolt Documentation Index and Retrieval for LLMs",
 		Description: "Returns Firebolt documentation articles prepared to be used by LLMs. " +
 			"Use this tool without parameters to list index of all Firebolt documentation articles. " +
-			"Use this tool with an article URL to retrieve a specific documentation article.",
+			"Use this tool with an article URL (provide a full url as stated in the index article) to retrieve a specific documentation article.",
 	}
 }
 
