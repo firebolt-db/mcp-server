@@ -30,12 +30,12 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 
 	// resources shared between Firebolt and Firebolt Core
 	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
-	resourceEngines := resources.NewEngines(dbPool)
 
 	// Firebolt Core tools and resource templates
 	if cfg.CoreURL != "" {
 		resourceLLMDocs := resources.NewLLMDocs()
 		resourceDatabases := resources.NewDatabases(dbPool, true)
+		resourceEngines := resources.NewEngines(dbPool, true)
 		resourceCoreAccounts := resources.NewCoreAccounts(dbPool)
 
 		tools := []server.Tool{
@@ -67,6 +67,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 
 	resourceAccounts := resources.NewAccounts(discoveryClient)
 	resourceDatabases := resources.NewDatabases(dbPool, false)
+	resourceEngines := resources.NewEngines(dbPool, false)
 
 	// Firebolt SaaS tools and resource templates
 	searchCfg := tool_search.Config{

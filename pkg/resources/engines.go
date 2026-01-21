@@ -26,20 +26,27 @@ func CoreEngineURI(engine string) string {
 // Engines is a resource template handler for serving Firebolt engine information.
 type Engines struct {
 	dbPool database.Pool
+	isCore bool
 }
 
 // NewEngines creates and returns a new instance of the Engines resource handler.
-func NewEngines(dbPool database.Pool) *Engines {
+func NewEngines(dbPool database.Pool, isCore bool) *Engines {
 	return &Engines{
 		dbPool: dbPool,
+		isCore: isCore,
 	}
 }
 
 // ResourceTemplate defines the template for engine resources.
 // It specifies the URI format, content type, description, and suggested usage.
 func (r *Engines) ResourceTemplate() *mcp.ResourceTemplate {
+	uriTemplate := EngineURI("{account}", "{engine}")
+	if r.isCore {
+		uriTemplate = CoreEngineURI("{engine}")
+	}
+
 	return &mcp.ResourceTemplate{
-		URITemplate: EngineURI("{account}", "{engine}"),
+		URITemplate: uriTemplate,
 		Name:        "Engine",
 		MIMEType:    mimetype.JSON,
 		Description: "Brief information about the engine in the Firebolt account.",
@@ -54,17 +61,26 @@ func (r *Engines) ResourceTemplate() *mcp.ResourceTemplate {
 // It extracts account and engine parameters and fetches the appropriate engine data.
 func (r *Engines) Handler(ctx context.Context, request *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 
-	params, err := args.Strings(request.GetParams().GetMeta(), "account", "engine")
-	if err != nil {
-		return nil, fmt.Errorf("bad request: %w", err)
+	var accountName, engineName string
+
+	if !r.isCore {
+		values, err := args.Strings(request.GetParams().GetMeta(), "account", "engine")
+		if err != nil {
+			return nil, fmt.Errorf("bad request: %w", err)
+		}
+
+		accountName, engineName = values[0], values[1]
 	}
 
-	return r.FetchEngineResources(ctx, params[0], params[1])
+	return r.FetchEngineResources(ctx, accountName, engineName)
 }
 
 // FetchEngineResources retrieves engine information from the database.
 // If a specific engine is specified, it filters for that engine; otherwise, it returns all engines.
 func (r *Engines) FetchEngineResources(ctx context.Context, account, engine string) (*mcp.ReadResourceResult, error) {
+	if r.isCore {
+		return r.fetchCoreEngineResources(ctx)
+	}
 
 	// Acquire a connection to the database
 	conn, err := r.dbPool.GetConnection(database.PoolParams{
@@ -114,8 +130,8 @@ func (r *Engines) FetchEngineResources(ctx context.Context, account, engine stri
 	}, nil
 }
 
-// FetchCoreEngineResources retrieves engine information in Firebolt Core.
-func (r *Engines) FetchCoreEngineResources(ctx context.Context) (*mcp.ReadResourceResult, error) {
+// fetchCoreEngineResources retrieves engine information in Firebolt Core.
+func (r *Engines) fetchCoreEngineResources(ctx context.Context) (*mcp.ReadResourceResult, error) {
 
 	// Acquire a connection to the database
 	conn, err := r.dbPool.GetConnection(database.PoolParams{})

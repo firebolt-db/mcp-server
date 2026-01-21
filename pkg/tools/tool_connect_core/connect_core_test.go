@@ -31,7 +31,7 @@ func (m *MockResourceFetcher) FetchDatabaseResources(ctx context.Context, _, _ s
 	return m.DatabasesFunc(ctx)
 }
 
-func (m *MockResourceFetcher) FetchCoreEngineResources(ctx context.Context) (*mcp.ReadResourceResult, error) {
+func (m *MockResourceFetcher) FetchEngineResources(ctx context.Context, _, _ string) (*mcp.ReadResourceResult, error) {
 	return m.EnginesFunc(ctx)
 }
 

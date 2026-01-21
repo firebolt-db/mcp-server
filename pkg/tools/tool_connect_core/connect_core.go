@@ -35,8 +35,8 @@ type DatabaseResourcesFetcher interface {
 // EngineResourcesFetcher defines the interface for retrieving engine resources.
 // Implementations should provide methods to fetch Firebolt engine information within an account.
 type EngineResourcesFetcher interface {
-	// FetchCoreEngineResources retrieves engine information in a Firebolt Core instance.
-	FetchCoreEngineResources(ctx context.Context) (*mcp.ReadResourceResult, error)
+	// FetchEngineResources retrieves engine information in a Firebolt Core instance.
+	FetchEngineResources(ctx context.Context, _, _ string) (*mcp.ReadResourceResult, error)
 }
 
 // ConnectCore represents a tool for fetching and returning Firebolt resource information.
@@ -110,7 +110,7 @@ func (t *ConnectCore) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		resources = append(resources, databases.Contents...)
 
 		// Fetch all engines
-		engines, err := t.enginesFetcher.FetchCoreEngineResources(ctx)
+		engines, err := t.enginesFetcher.FetchEngineResources(ctx, "", "")
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to discover engine resources: %w", err)
 		}
