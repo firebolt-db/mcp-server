@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/firebolt-db/mcp-server/compare/v0.5.0...v0.6.0) (2026-01-26)
+
+
+### Features
+
+* support Firebolt Core in MCP server ([#59](https://github.com/firebolt-db/mcp-server/issues/59)) ([14a3574](https://github.com/firebolt-db/mcp-server/commit/14a35748d29829738259e04ddbc36dddad8f5bb8))
+
+
+### Dependencies
+
+* **github-actions:** bump actions/setup-go from 5.6.0 to 6.1.0 in the github-actions-deps group across 1 directory ([#55](https://github.com/firebolt-db/mcp-server/issues/55)) ([d50b0b1](https://github.com/firebolt-db/mcp-server/commit/d50b0b1dce9c0a1d2625ac9177160c9891e5af62))
+
 ## [0.5.0](https://github.com/firebolt-db/mcp-server/compare/v0.4.1...v0.5.0) (2026-01-15)
 
 
