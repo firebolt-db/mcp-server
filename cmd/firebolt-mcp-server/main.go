@@ -14,16 +14,9 @@ import (
 
 	"github.com/urfave/cli/v3"
 
-	"github.com/firebolt-db/mcp-server/cmd/docs-scrapper/fireboltdocs"
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
-	"github.com/firebolt-db/mcp-server/pkg/clients/discovery"
 	"github.com/firebolt-db/mcp-server/pkg/prompts"
-	"github.com/firebolt-db/mcp-server/pkg/resources"
 	"github.com/firebolt-db/mcp-server/pkg/server"
-	"github.com/firebolt-db/mcp-server/pkg/tools/tool_connect"
-	"github.com/firebolt-db/mcp-server/pkg/tools/tool_docs"
-	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
-	"github.com/firebolt-db/mcp-server/pkg/tools/tool_search"
 )
 
 var (
@@ -76,7 +69,6 @@ func main() {
 			&cli.StringFlag{
 				Name:     "client-id",
 				Category: "Firebolt Authentication",
-				Required: true,
 				Value:    "",
 				Usage:    "Service account client ID for authentication",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_CLIENT_ID"),
@@ -84,7 +76,6 @@ func main() {
 			&cli.StringFlag{
 				Name:     "client-secret",
 				Category: "Firebolt Authentication",
-				Required: true,
 				Value:    "",
 				Usage:    "Service account client secret for authentication",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_CLIENT_SECRET"),
@@ -96,6 +87,13 @@ func main() {
 				Value:    "app.firebolt.io",
 				Usage:    "Firebolt environment to connect to",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_ENVIRONMENT"),
+			},
+			&cli.StringFlag{
+				Name:     "core-url",
+				Category: "Firebolt Environment",
+				Value:    "",
+				Usage:    "Firebolt Core URL to connect to",
+				Sources:  cli.EnvVars("FIREBOLT_MCP_CORE_URL"),
 			},
 			&cli.BoolFlag{
 				Name:     "skip-docs-proof",
@@ -120,70 +118,47 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	// Initialize logger
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
+	cfg := server.Config{
+		Transport:                 cmd.String("transport"),
+		TransportSSEListenAddress: cmd.String("transport-sse-listen-address"),
+		DisableResources:          cmd.Bool("disable-resources"),
+		ClientID:                  cmd.String("client-id"),
+		ClientSecret:              cmd.String("client-secret"),
+		Environment:               cmd.String("environment"),
+		CoreURL:                   cmd.String("core-url"),
+		SkipDocsProof:             cmd.Bool("skip-docs-proof"),
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid configuration: %w", err)
+	}
+
 	// Connect to Firebolt
-	err := os.Setenv("FIREBOLT_ENDPOINT", fmt.Sprintf("https://api.%s", cmd.String("environment")))
+	err := os.Setenv("FIREBOLT_ENDPOINT", fmt.Sprintf("https://api.%s", cfg.Environment))
 	if err != nil {
 		return fmt.Errorf("failed to set FIREBOLT_ENDPOINT environment variable: %w", err)
 	}
-	clientID := cmd.String("client-id")
-	clientSecret := cmd.String("client-secret")
-	dbPool, dbPoolClose := database.NewPool(logger, clientID, clientSecret)
+
+	dbPool, dbPoolClose := getDBPool(cfg, logger)
 	defer dbPoolClose()
-	discoveryClient, err := discovery.NewClient(
-		ctx, logger,
-		clientID, clientSecret,
-		fmt.Sprintf("https://id.%s", cmd.String("environment")),
-		fmt.Sprintf("https://api.%s/web/v3", cmd.String("environment")),
-	)
+
+	// prepare tools and resource templates
+	tools, resourceTemplates, err := prepareToolsAndResourceTemplates(ctx, logger, cfg, dbPool)
 	if err != nil {
-		return fmt.Errorf("failed to create Firebolt discovery client: %w", err)
+		return fmt.Errorf("failed to prepare tools and resource templates: %w", err)
 	}
 
 	// Initialize MCP server
-	docsProofToken := generateRandomSecret()
-	disableResources := cmd.Bool("disable-resources")
-	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
-	resourceAccounts := resources.NewAccounts(discoveryClient)
-	resourceDatabases := resources.NewDatabases(dbPool)
-	resourceEngines := resources.NewEngines(dbPool)
-
-	searchCfg := tool_search.Config{
-		BaseURL:      fmt.Sprintf("https://api.%s", cmd.String("environment")),
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
-		TokenURL:     fmt.Sprintf("https://id.%s/oauth/token", cmd.String("environment")),
-	}
-
-	searchTool, err := tool_search.NewSearch(ctx, searchCfg)
-	if err != nil {
-		return fmt.Errorf("failed to create search tool: %w", err)
-	}
-
-	var docsProof *string
-	if !cmd.Bool("skip-docs-proof") {
-		docsProof = &docsProofToken
-	}
-
 	srv := server.NewServer(
 		logger,
 		fullVersion(),
-		cmd.String("transport"),
-		cmd.String("transport-sse-listen-address"),
-		[]server.Tool{
-			tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, disableResources),
-			tool_docs.NewDocs(resourceDocs, disableResources),
-			tool_query.NewQuery(dbPool),
-			searchTool,
-		},
+		cfg.Transport,
+		cfg.TransportSSEListenAddress,
+		tools,
 		[]server.Prompt{
 			prompts.NewFireboltExpert(),
 		},
-		[]server.ResourceTemplate{
-			resourceDocs,
-			resourceAccounts,
-			resourceDatabases,
-			resourceEngines,
-		},
+		resourceTemplates,
 	)
 
 	// Start the server
@@ -197,6 +172,24 @@ func run(ctx context.Context, cmd *cli.Command) error {
 	}
 
 	return nil
+}
+
+// getDBPool returns a database pool for the given Firebolt environment.
+// It also checks provided configuration values.
+// Required values for Firebolt:
+// - Client ID
+// - Client Secret
+// Required values for Firebolt Core:
+// - Core URL
+func getDBPool(cfg server.Config, logger *slog.Logger) (database.Pool, func()) {
+	isCore := cfg.CoreURL != ""
+
+	// check if the configuration specifies Firebolt Core connection
+	if isCore {
+		return database.NewCorePool(logger, cfg.CoreURL)
+	}
+
+	return database.NewPool(logger, cfg.ClientID, cfg.ClientSecret)
 }
 
 // generateRandomSecret generates a random 32-character alphanumeric string.

@@ -48,6 +48,25 @@ func TestDocs_Handler(t *testing.T) {
 		assert.Contains(t, resource.Text, "Foundational Knowledge Layer", "should contain the Foundational Knowledge Layer")
 	})
 
+	t.Run("fetch core overview article", func(t *testing.T) {
+
+		request := &mcp.ReadResourceRequest{
+			Params: &mcp.ReadResourceParams{
+				Meta: map[string]any{
+					"article": resources.DocsCoreArticleOverview,
+				},
+			},
+		}
+
+		result, err := docs.Handler(t.Context(), request)
+		assert.NoError(t, err)
+		require.Len(t, result.Contents, 1)
+		resource := result.Contents[0]
+		assert.Equal(t, resources.DocsURI(resources.DocsCoreArticleOverview), resource.URI)
+		assert.Equal(t, mimetype.Markdown, resource.MIMEType)
+		assert.Contains(t, resource.Text, "Foundational Knowledge Layer", "should contain the Foundational Knowledge Layer")
+	})
+
 	t.Run("fetch proof article", func(t *testing.T) {
 
 		request := &mcp.ReadResourceRequest{

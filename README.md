@@ -47,7 +47,9 @@ A Model Context Protocol implementation that connects your LLM to Firebolt Data 
 
 ## How To Use
 
-Before you start, ensure you have a Firebolt [service account](https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html) with a client ID and client secret.
+Before you start, ensure you have either:
+- A Firebolt [service account](https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html) with a client ID and client secret.
+- A [Firebolt Core](https://www.firebolt.io/core) instance URL.
 
 ### Installing the MCP Server
 
@@ -59,6 +61,7 @@ You can run the Firebolt MCP Server either via Docker or by downloading the bina
 ```bash
 docker run \
   --rm \
+  --network host \
   -e FIREBOLT_MCP_CLIENT_ID=your-client-id \
   -e FIREBOLT_MCP_CLIENT_SECRET=your-client-secret \
   ghcr.io/firebolt-db/mcp-server:0.5.0
@@ -103,6 +106,7 @@ To integrate with Claude Desktop using **Docker**:
             "run",
             "-i",
             "--rm",
+            "--network", "host",
             "-e", "FIREBOLT_MCP_CLIENT_ID",
             "-e", "FIREBOLT_MCP_CLIENT_SECRET",
             "ghcr.io/firebolt-db/mcp-server:0.5.0"
@@ -132,6 +136,35 @@ To integrate with Claude Desktop using **Docker**:
       }
     }
     ```
+
+    #### Connecting to Firebolt Core
+
+    If you are using [Firebolt Core](https://docs.firebolt.io/firebolt-core), you can connect by providing the Core URL instead of service account credentials.
+
+    To use Firebolt Core with **Claude Desktop**:
+    
+    [//]: # (x-release-please-start-version)
+    ```json
+    {
+      "mcpServers": {
+        "firebolt": {
+          "command": "docker",
+          "args": [
+            "run",
+            "-i",
+            "--rm",
+            "--network", "host",
+            "-e", "FIREBOLT_MCP_CORE_URL",
+            "ghcr.io/firebolt-db/mcp-server:0.5.0"
+          ],
+          "env": {
+            "FIREBOLT_MCP_CORE_URL": "http://localhost:3473"
+          }
+        }
+      }
+    }
+    ```
+    [//]: # (x-release-please-end)
 
 4. Save the config and restart Claude Desktop.
 

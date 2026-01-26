@@ -51,19 +51,60 @@ func TestEngineURI(t *testing.T) {
 	}
 }
 
+func TestCoreEngineURI(t *testing.T) {
+	tests := []struct {
+		name     string
+		engine   string
+		expected string
+	}{
+		{
+			name:     "basic case",
+			engine:   "test-engine",
+			expected: "firebolt://engines/test-engine",
+		},
+		{
+			name:     "with special characters",
+			engine:   "test-engine-123",
+			expected: "firebolt://engines/test-engine-123",
+		},
+		{
+			name:     "empty values",
+			engine:   "",
+			expected: "firebolt://engines/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := resources.CoreEngineURI(tt.engine)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestNewEngines(t *testing.T) {
 	pool := databasemock.NewPoolMock()
 	engines := resources.NewEngines(pool)
 	assert.NotNil(t, engines)
 }
 
-func TestEngines_ResourceTemplate(t *testing.T) {
+func TestEngines_ResourceTemplate_SaaS(t *testing.T) {
 	pool := databasemock.NewPoolMock()
 	engines := resources.NewEngines(pool)
-	assert.NotEmpty(t, engines.ResourceTemplate())
+	resourceTemplate := engines.ResourceTemplate()
+	require.NotEmpty(t, resourceTemplate)
+	assert.Equal(t, "firebolt://accounts/{account}/engines/{engine}", resourceTemplate.URITemplate)
 }
 
-func TestEngines_Handler(t *testing.T) {
+func TestEngines_ResourceTemplate_Core(t *testing.T) {
+	pool := databasemock.NewPoolMock()
+	engines := resources.NewEngines(pool, resources.WithCore())
+	resourceTemplate := engines.ResourceTemplate()
+	require.NotEmpty(t, resourceTemplate)
+	assert.Equal(t, "firebolt://engines/{engine}", resourceTemplate.URITemplate)
+}
+
+func TestEngines_Handler_SaaS(t *testing.T) {
 	tests := []struct {
 		name          string
 		params        map[string]any
@@ -184,7 +225,109 @@ func TestEngines_Handler(t *testing.T) {
 	}
 }
 
-func TestEngines_FetchEngineResources(t *testing.T) {
+func TestEngines_Handler_Core(t *testing.T) {
+	tests := []struct {
+		name          string
+		params        map[string]any
+		mockSetup     func(*databasemock.PoolMock, *databasemock.ConnectionMock)
+		expected      []map[string]any
+		expectedError string
+	}{
+		{
+			name: "successful request",
+			params: map[string]any{
+				"engine": "test-engine",
+			},
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					assert.Equal(t, "SELECT engine_name, description, status, version, type, family, nodes, clusters, auto_start FROM information_schema.engines;", sql)
+					return []map[string]any{
+						{
+							"engine_name": "test-engine",
+							"status":      "running",
+							"version":     "3.0",
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{AccountName: "test-account"}, conn)
+			},
+			expected: []map[string]any{
+				{
+					"engine_name": "test-engine",
+					"status":      "running",
+					"version":     "3.0",
+				},
+			},
+		},
+		{
+			name: "database connection error",
+			params: map[string]any{
+				"engine": "test-engine",
+			},
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				pool.WithGetConnectionFunc(func(params database.PoolParams) (database.Connection, error) {
+					return nil, errors.New("connection error")
+				})
+			},
+			expectedError: "failed to acquire database connection: connection error",
+		},
+		{
+			name: "query execution error",
+			params: map[string]any{
+				"engine": "test-engine",
+			},
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					return nil, errors.New("query error")
+				})
+				pool.RegisterConnection(database.PoolParams{AccountName: "test-account"}, conn)
+			},
+			expectedError: "failed to query database: query error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pool := databasemock.NewPoolMock()
+			conn := databasemock.NewConnectionMock()
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(pool, conn)
+			}
+
+			engines := resources.NewEngines(pool, resources.WithCore())
+
+			request := &mcp.ReadResourceRequest{
+				Params: &mcp.ReadResourceParams{
+					Meta: tt.params,
+				},
+			}
+
+			result, err := engines.Handler(t.Context(), request)
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, result.Contents, len(tt.expected))
+
+			for i, res := range result.Contents {
+				var data map[string]any
+				err := json.Unmarshal([]byte(res.Text), &data)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expected[i], data)
+				assert.Equal(t, resources.CoreEngineURI(data["engine_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
+			}
+		})
+	}
+}
+
+func TestEngines_FetchEngineResources_SaaS(t *testing.T) {
 	tests := []struct {
 		name          string
 		account       string
@@ -303,6 +446,94 @@ func TestEngines_FetchEngineResources(t *testing.T) {
 
 				assert.Equal(t, tt.expected[i], data)
 				assert.Equal(t, resources.EngineURI(tt.account, data["engine_name"].(string)), res.URI)
+				assert.Equal(t, mimetype.JSON, res.MIMEType)
+			}
+		})
+	}
+}
+
+func TestEngines_FetchEngineResources_Core(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockSetup     func(*databasemock.PoolMock, *databasemock.ConnectionMock)
+		expected      []map[string]any
+		expectedError string
+	}{
+		{
+			name: "fetch all engines",
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					assert.Equal(t, "SELECT engine_name, description, status, version, type, family, nodes, clusters, auto_start FROM information_schema.engines;", sql)
+					assert.Empty(t, args)
+					return []map[string]any{
+						{
+							"engine_name": "engine-1",
+							"status":      "running",
+						},
+						{
+							"engine_name": "engine-2",
+							"status":      "stopped",
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expected: []map[string]any{
+				{
+					"engine_name": "engine-1",
+					"status":      "running",
+				},
+				{
+					"engine_name": "engine-2",
+					"status":      "stopped",
+				},
+			},
+		},
+		{
+			name: "json marshaling error",
+			mockSetup: func(pool *databasemock.PoolMock, conn *databasemock.ConnectionMock) {
+				conn.WithQueryFunc(func(ctx context.Context, sql string, args ...any) ([]map[string]any, error) {
+					return []map[string]any{
+						{
+							"engine_name": make(chan int), // Channels are not JSON-serializable
+						},
+					}, nil
+				})
+				pool.RegisterConnection(database.PoolParams{}, conn)
+			},
+			expectedError: "failed to marshal row data to JSON",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pool := databasemock.NewPoolMock()
+			conn := databasemock.NewConnectionMock()
+
+			if tt.mockSetup != nil {
+				tt.mockSetup(pool, conn)
+			}
+
+			engines := resources.NewEngines(pool, resources.WithCore())
+
+			result, err := engines.FetchEngineResources(t.Context(), "", "")
+
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Len(t, result.Contents, len(tt.expected))
+
+			for i, res := range result.Contents {
+				var data map[string]any
+				err := json.Unmarshal([]byte(res.Text), &data)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expected[i], data)
+				assert.Equal(t, resources.CoreEngineURI(data["engine_name"].(string)), res.URI)
 				assert.Equal(t, mimetype.JSON, res.MIMEType)
 			}
 		})

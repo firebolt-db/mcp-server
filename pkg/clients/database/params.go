@@ -65,3 +65,41 @@ func (c ConnectionParams) Hash() string {
 	sum := sha512.Sum512_256([]byte(c.DSN()))
 	return hex.EncodeToString(sum[:])
 }
+
+// CoreConnectionParams holds the parameters required to establish a connection to Firebolt Core.
+// It contains instance URL and database name.
+type CoreConnectionParams struct {
+	URL          string
+	DatabaseName *string
+}
+
+// String returns a string representation of the connection parameters.
+func (c CoreConnectionParams) String() string {
+	return c.DSN()
+}
+
+// DriverName returns the name of the database driver.
+// In this case, it returns "firebolt", which is the driver name used by the Firebolt Go SDK.
+func (c CoreConnectionParams) DriverName() string {
+	return "firebolt"
+}
+
+// DSN returns the Data Source Name expected by the Firebolt Go SDK.
+// This is a connection string that contains all the necessary information to connect to the Firebolt Core database.
+// The format follows the pattern: firebolt://[/database]?url=core_instance_url
+func (c CoreConnectionParams) DSN() string {
+	dbName := ""
+	if c.DatabaseName != nil {
+		dbName = "/" + *c.DatabaseName
+	}
+
+	return fmt.Sprintf("firebolt://%s?url=%s", dbName, c.URL)
+}
+
+// Hash returns a SHA-512/256 hash of the connection parameters.
+// This is useful for caching connections or comparing parameter sets without exposing sensitive information.
+// The hash is computed from the full DSN string and returned as a hex-encoded string.
+func (c CoreConnectionParams) Hash() string {
+	sum := sha512.Sum512_256([]byte(c.DSN()))
+	return hex.EncodeToString(sum[:])
+}

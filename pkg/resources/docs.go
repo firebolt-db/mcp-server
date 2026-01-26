@@ -18,6 +18,8 @@ const (
 	DocsArticleOverview  = "mcp/overview.md"
 	DocsArticleProof     = "mcp/proof.md"
 	DocsArticleReference = "mcp/reference.md"
+
+	DocsCoreArticleOverview = "mcp/core_overview.md"
 )
 
 //go:embed docs_overview.md
@@ -28,6 +30,9 @@ var docsProofMD string
 
 //go:embed docs_reference.md
 var docsReferenceMD string
+
+//go:embed docs_core_overview.md
+var docsCoreOverviewMD string
 
 // DocsURI creates a formatted Firebolt documentation URI for a given article.
 func DocsURI(article string) string {
@@ -91,6 +96,9 @@ func (r *Docs) FetchDocsResources(_ context.Context, article string) (*mcp.ReadR
 
 		// Return the pre-embedded overview markdown content
 		return r.newReadResourceResult(article, docsOverviewMD)
+
+	case DocsCoreArticleOverview:
+		return r.newReadResourceResult(article, docsCoreOverviewMD)
 
 	case DocsArticleProof:
 

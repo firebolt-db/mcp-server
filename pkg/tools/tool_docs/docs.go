@@ -31,8 +31,11 @@ type DocsResourcesFetcher interface {
 type Docs struct {
 	docsFetcher      DocsResourcesFetcher // Fetches documentation resources
 	disableResources bool                 // Return text content instead of embedded resources
+	isCore           bool                 // Flag indicating whether the tool is for Firebolt Core or Firebolt SaaS
 }
 
+// Tool returns the mcp.Tool definition for the Docs tool.
+// This defines how the tool is represented in the MCP system.
 func (t *Docs) Tool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:  "firebolt_docs_overview",
@@ -54,13 +57,15 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
 
 		var results []*mcp.ResourceContents // Collection of fetched documentation resources
 
-		articleIDs := []string{
-			resources.DocsArticleOverview, // General Firebolt overview
-			resources.DocsArticleProof,    // Contains proof value for connect tool
-			// Don't pass the full docs reference. It is expected that the LLM should use `firebolt_docs_search`
-			// to get the detailed documentation.
-			// resources.DocsArticleReference, // Reference documentation
+		articleIDs := []string{}
+
+		if t.isCore {
+			articleIDs = append(articleIDs, resources.DocsCoreArticleOverview) // General Firebolt Core overview
+		} else {
+			articleIDs = append(articleIDs, resources.DocsArticleOverview) // General Firebolt overview
 		}
+
+		articleIDs = append(articleIDs, resources.DocsArticleProof) // Contains proof value for connect tool
 
 		// Fetch each requested article
 		for _, value := range articleIDs {
@@ -82,9 +87,10 @@ func (t *Docs) Handler() mcp.ToolHandlerFor[Input, *Output] {
 
 // NewDocs creates a new instance of the Docs tool with the provided documentation fetcher.
 // It requires an implementation for fetching documentation articles.
-func NewDocs(docsFetcher DocsResourcesFetcher, disableResources bool) *Docs {
+func NewDocs(docsFetcher DocsResourcesFetcher, disableResources bool, isCore bool) *Docs {
 	return &Docs{
 		docsFetcher:      docsFetcher,
 		disableResources: disableResources,
+		isCore:           isCore,
 	}
 }

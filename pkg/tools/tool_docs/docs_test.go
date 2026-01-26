@@ -16,13 +16,13 @@ import (
 
 func TestNewDocs(t *testing.T) {
 	mock := &MockDocsFetcher{}
-	docsTool := tool_docs.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false, false)
 	assert.NotNil(t, docsTool)
 }
 
 func TestDocs_Tool(t *testing.T) {
 	mock := &MockDocsFetcher{}
-	docsTool := tool_docs.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false, false)
 
 	tool := docsTool.Tool()
 	assert.Equal(t, "firebolt_docs_overview", tool.Name)
@@ -38,7 +38,7 @@ func TestDocs_Handler_FetchError(t *testing.T) {
 	}
 
 	// Create the tool
-	docsTool := tool_docs.NewDocs(mock, false)
+	docsTool := tool_docs.NewDocs(mock, false, false)
 
 	// Execute the handler
 	request := &mcp.CallToolRequest{}
@@ -74,7 +74,7 @@ func TestDocs_Handler_DisableResources(t *testing.T) {
 	}
 
 	// Create the tool with disableResources set to true
-	docsTool := tool_docs.NewDocs(mock, true)
+	docsTool := tool_docs.NewDocs(mock, true, false)
 
 	// Execute the handler with empty request (should return default articles)
 	request := &mcp.CallToolRequest{}
