@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
-	github.com/firebolt-db/firebolt-go-sdk v1.14.1
+	github.com/firebolt-db/firebolt-go-sdk v1.15.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gocolly/colly/v2 v2.3.0
 	github.com/modelcontextprotocol/go-sdk v1.2.0
