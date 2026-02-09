@@ -83,10 +83,53 @@ docker run \
 
 ### Connecting Your LLM
 
-Once the MCP Server is installed, you can connect various LLM clients.
+Once the MCP Server is installed, you can connect various LLM clients. Choose your client below.
 
-Below are integration examples for **Claude Desktop**.
-For other clients like **VSCode Copilot Chat** and **Cursor**, please refer to their official documentation.
+#### Cursor
+
+Install the Firebolt MCP server in Cursor with one click. You will need to set your credentials in **Cursor Settings > Tools & MCP** (edit the added server or `mcp.json`).
+
+**Firebolt Cloud** (service account):
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=firebolt&config=eyJjb21tYW5kIjoiZG9ja2VyIiwiYXJncyI6WyJydW4iLCItaSIsIi0tcm0iLCItLW5ldHdvcmsiLCJob3N0IiwiLWUiLCJGSVJFQk9MVF9NQ1BfQ0xJRU5UX0lEIiwiLWUiLCJGSVJFQk9MVF9NQ1BfQ0xJRU5UX1NFQ1JFVCIsIi1lIiwiRklSRUJPTFRfTUNQX0RJU0FCTEVfUkVTT1VSQ0VTIiwiZ2hjci5pby9maXJlYm9sdC1kYi9tY3Atc2VydmVyOmxhdGVzdCJdLCJlbnYiOnsiRklSRUJPTFRfTUNQX0NMSUVOVF9JRCI6InlvdXItY2xpZW50LWlkIiwiRklSRUJPTFRfTUNQX0NMSUVOVF9TRUNSRVQiOiJ5b3VyLWNsaWVudC1zZWNyZXQiLCJGSVJFQk9MVF9NQ1BfRElTQUJMRV9SRVNPVVJDRVMiOiJ0cnVlIn19)
+
+**Firebolt Core** (local or self-hosted):
+
+[![Add to Cursor](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en-US/install-mcp?name=firebolt-core&config=eyJjb21tYW5kIjoiZG9ja2VyIiwiYXJncyI6WyJydW4iLCItaSIsIi0tcm0iLCItLW5ldHdvcmsiLCJob3N0IiwiLWUiLCJGSVJFQk9MVF9NQ1BfQ09SRV9VUkwiLCItZSIsIkZJUkVCT0xUX01DUF9ESVNBQkxFX1JFU09VUkNFUyIsImdoY3IuaW8vZmlyZWJvbHQtZGIvbWNwLXNlcnZlcjpsYXRlc3QiXSwiZW52Ijp7IkZJUkVCT0xUX01DUF9DT1JFX1VSTCI6Imh0dHA6Ly9sb2NhbGhvc3Q6MzQ3MyIsIkZJUkVCT0xUX01DUF9ESVNBQkxFX1JFU09VUkNFUyI6InRydWUifX0=)
+
+> [!IMPORTANT]
+> Cursor does not support MCP resources yet. This MCP server uses resources heavily, so it will not work in Cursor unless resource usage is disabled. The buttons above already set `FIREBOLT_MCP_DISABLE_RESOURCES=true` for you. If you configure manually, you must set this environment variable.
+
+#### VS Code (Copilot Chat)
+
+To integrate MCP with Copilot Chat in VS Code, see the official guide: [Extending Copilot Chat with the Model Context Protocol](https://docs.github.com/en/copilot/customizing-copilot/extending-copilot-chat-with-mcp).
+
+Add the Firebolt MCP server to your MCP configuration (e.g. via Command Palette > **MCP: Open User Configuration**). Example for **Firebolt Cloud** with Docker:
+
+```json
+{
+  "mcpServers": {
+    "firebolt": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--network", "host",
+        "-e", "FIREBOLT_MCP_CLIENT_ID",
+        "-e", "FIREBOLT_MCP_CLIENT_SECRET",
+        "ghcr.io/firebolt-db/mcp-server:latest"
+      ],
+      "env": {
+        "FIREBOLT_MCP_CLIENT_ID": "your-client-id",
+        "FIREBOLT_MCP_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+Replace `your-client-id` and `your-client-secret` with your [Firebolt service account](https://docs.firebolt.io/Guides/managing-your-organization/service-accounts.html) credentials.
 
 #### Claude Desktop
 
@@ -137,7 +180,7 @@ To integrate with Claude Desktop using **Docker**:
     }
     ```
 
-    #### Connecting to Firebolt Core
+    **Connecting to Firebolt Core**
 
     If you are using [Firebolt Core](https://docs.firebolt.io/firebolt-core), you can connect by providing the Core URL instead of service account credentials.
 
@@ -170,27 +213,34 @@ To integrate with Claude Desktop using **Docker**:
 
 More details: [Claude MCP Quickstart Guide](https://modelcontextprotocol.io/quickstart/user)
 
-#### GitHub Copilot Chat (VSCode)
+#### Manual configuration (other MCP clients)
 
-To integrate MCP with Copilot Chat in VSCode, refer to the official documentation:
+For any MCP client that uses a JSON config (e.g. `mcpServers`), you can add the Firebolt server with the following canonical configuration. **Firebolt Cloud** (Docker):
 
-👉 [Extending Copilot Chat with the Model Context Protocol](https://docs.github.com/en/copilot/customizing-copilot/extending-copilot-chat-with-mcp)
-
-#### Cursor Editor
-
-To set up MCP in Cursor, follow their guide:
-
-👉 [Cursor Documentation on Model Context Protocol](https://docs.cursor.com/context/model-context-protocol)
-
-> [!IMPORTANT]  
-> Cursor **does not support MCP resources** yet.
-This MCP server uses resources heavily, so **it will not work in Cursor** unless you explicitly disable resource usage.
-
-To make it work, you **must** set the following environment variable:
-
+```json
+{
+  "mcpServers": {
+    "firebolt": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--network", "host",
+        "-e", "FIREBOLT_MCP_CLIENT_ID",
+        "-e", "FIREBOLT_MCP_CLIENT_SECRET",
+        "ghcr.io/firebolt-db/mcp-server:latest"
+      ],
+      "env": {
+        "FIREBOLT_MCP_CLIENT_ID": "your-client-id",
+        "FIREBOLT_MCP_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
 ```
-FIREBOLT_MCP_DISABLE_RESOURCES=true
-```
+
+For **Firebolt Core**, use `FIREBOLT_MCP_CORE_URL` (e.g. `http://localhost:3473`) in `env` and pass `-e FIREBOLT_MCP_CORE_URL` in `args` instead of the client ID/secret. For Cursor, also set `FIREBOLT_MCP_DISABLE_RESOURCES=true` in `env` and in `args`.
 
 #### Using SSE Transport
 
