@@ -16,7 +16,6 @@
     ".": {}
   },
   "extra-files": [
-    "README.md",
-    "sonar-project.properties"
+    "README.md"
   ]
 }
