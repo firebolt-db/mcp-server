@@ -4,14 +4,14 @@ go 1.25
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
-	github.com/firebolt-db/firebolt-go-sdk v1.14.1
+	github.com/firebolt-db/firebolt-go-sdk v1.15.1
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gocolly/colly/v2 v2.3.0
-	github.com/modelcontextprotocol/go-sdk v1.2.0
+	github.com/modelcontextprotocol/go-sdk v1.3.0
 	github.com/neilotoole/slogt v1.1.0
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v3 v3.6.2
-	golang.org/x/oauth2 v0.34.0
+	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sync v0.19.0
 )
 
