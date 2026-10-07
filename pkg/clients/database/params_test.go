@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
 )
@@ -98,6 +99,58 @@ func TestConnectionParams_String(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.params.String(), "String should mask sensitive information")
 		})
 	}
+}
+
+func TestConnectionParams_Validate(t *testing.T) {
+	params := database.ConnectionParams{
+		ClientID:     "test-client",
+		ClientSecret: "test-secret+%value",
+		AccountName:  "test-account",
+		DatabaseName: strPtr("test_db"),
+		EngineName:   strPtr("test-engine"),
+	}
+	require.NoError(t, params.Validate())
+	params.DatabaseName = nil
+	params.EngineName = nil
+	require.NoError(t, params.Validate())
+
+	for _, field := range []string{"account", "engine", "database", "client ID", "client secret"} {
+		t.Run(field, func(t *testing.T) {
+			invalid := params
+			value := "test&url=http://127.0.0.1:1"
+			switch field {
+			case "account":
+				invalid.AccountName = value
+			case "engine":
+				invalid.EngineName = &value
+			case "database":
+				invalid.DatabaseName = strPtr("test_db?url=http://127.0.0.1:1")
+			case "client ID":
+				invalid.ClientID = value
+			case "client secret":
+				invalid.ClientSecret = value
+			}
+			require.EqualError(t, invalid.Validate(), "invalid connection parameters")
+		})
+	}
+}
+
+func TestCoreConnectionParams_Validate(t *testing.T) {
+	params := database.CoreConnectionParams{
+		URL:          "http://localhost:3744",
+		DatabaseName: strPtr("test_db"),
+	}
+	require.NoError(t, params.Validate())
+	params.DatabaseName = nil
+	require.NoError(t, params.Validate())
+
+	for _, name := range []string{"test_db?url=http://127.0.0.1:1", "test_db/other", "test_db&engine=other"} {
+		invalid := params
+		invalid.DatabaseName = &name
+		require.EqualError(t, invalid.Validate(), "invalid connection parameters")
+	}
+	params.URL += "&engine=other"
+	require.EqualError(t, params.Validate(), "invalid connection parameters")
 }
 
 func TestConnectionParams_Hash(t *testing.T) {
