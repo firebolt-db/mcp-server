@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/firebolt-db/mcp-server/compare/v0.6.0...v0.6.1) (2026-10-07)
+
+
+### Bug Fixes
+
+* validate database connection parameters ([#79](https://github.com/firebolt-db/mcp-server/issues/79)) ([d240c04](https://github.com/firebolt-db/mcp-server/commit/d240c0415ffd7ac7fff85c3e4c0beb6bc6e7881d))
+
 ## [0.6.0](https://github.com/firebolt-db/mcp-server/compare/v0.5.0...v0.6.0) (2026-01-26)
 
 
