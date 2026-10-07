@@ -3,8 +3,11 @@ package database
 import (
 	"crypto/sha512"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/firebolt-db/firebolt-go-sdk"
 )
 
 const secretMask = "xxxxx"
@@ -58,6 +61,18 @@ func (c ConnectionParams) DSN() string {
 	return fmt.Sprintf("firebolt://%s?account_name=%s&client_id=%s&client_secret=%s%s", dbName, c.AccountName, c.ClientID, c.ClientSecret, engineName)
 }
 
+// Validate checks that the driver parses every field unchanged.
+func (c ConnectionParams) Validate() error {
+	settings, err := fireboltgosdk.ParseDSNString(c.DSN())
+	if err != nil || !settings.NewVersion || settings.Url != "" ||
+		settings.ClientID != c.ClientID || settings.ClientSecret != c.ClientSecret ||
+		settings.AccountName != c.AccountName || settings.Database != stringValue(c.DatabaseName) ||
+		settings.EngineName != stringValue(c.EngineName) || len(settings.DefaultQueryParams) != 0 {
+		return errors.New("invalid connection parameters")
+	}
+	return nil
+}
+
 // Hash returns a SHA-512/256 hash of the connection parameters.
 // This is useful for caching connections or comparing parameter sets without exposing sensitive information.
 // The hash is computed from the full DSN string and returned as a hex-encoded string.
@@ -94,6 +109,25 @@ func (c CoreConnectionParams) DSN() string {
 	}
 
 	return fmt.Sprintf("firebolt://%s?url=%s", dbName, c.URL)
+}
+
+// Validate checks that only the configured URL and database are selected.
+func (c CoreConnectionParams) Validate() error {
+	settings, err := fireboltgosdk.ParseDSNString(c.DSN())
+	if err != nil || !settings.NewVersion || settings.Url != c.URL ||
+		settings.Database != stringValue(c.DatabaseName) || settings.AccountName != "" ||
+		settings.EngineName != "" || settings.ClientID != "" || settings.ClientSecret != "" ||
+		len(settings.DefaultQueryParams) != 0 {
+		return errors.New("invalid connection parameters")
+	}
+	return nil
+}
+
+func stringValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // Hash returns a SHA-512/256 hash of the connection parameters.

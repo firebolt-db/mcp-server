@@ -25,6 +25,26 @@ func TestNewConnection(t *testing.T) {
 	})
 }
 
+func TestNewConnectionRejectsParameterOverrides(t *testing.T) {
+	for _, params := range []database.DSNProvider{
+		database.ConnectionParams{
+			ClientID:     "test-client",
+			ClientSecret: "test-secret",
+			AccountName:  "test-account",
+			EngineName:   strPtr("test&url=http://127.0.0.1:1"),
+		},
+		database.CoreConnectionParams{
+			URL:          "http://localhost:3744",
+			DatabaseName: strPtr("test_db?url=http://127.0.0.1:1"),
+		},
+	} {
+		conn, closer, err := database.NewConnection(slogt.New(t), params)
+		require.EqualError(t, err, "invalid connection parameters")
+		assert.Nil(t, conn)
+		assert.Nil(t, closer)
+	}
+}
+
 func TestConnectionQuery(t *testing.T) {
 
 	t.Run("successful query", func(t *testing.T) {
@@ -204,6 +224,10 @@ func (r *mockRows) Next(dest []driver.Value) error {
 }
 
 type mockParams struct {
+}
+
+func (m mockParams) Validate() error {
+	return nil
 }
 
 func (m mockParams) DriverName() string {

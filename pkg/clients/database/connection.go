@@ -41,6 +41,9 @@ func NewConnection(
 	logger *slog.Logger,
 	params DSNProvider,
 ) (ConnectionCloser, func(), error) {
+	if err := params.Validate(); err != nil {
+		return nil, nil, err
+	}
 
 	db, err := sql.Open(params.DriverName(), params.DSN())
 	if err != nil {
@@ -140,6 +143,7 @@ func (c *connectionImpl) Close() {
 // The only DSNProvider implementation is ConnectionParams, but this interface
 // allows to write mock implementations for testing purposes.
 type DSNProvider interface {
+	Validate() error
 
 	// DriverName returns the name of the database driver.
 	DriverName() string
