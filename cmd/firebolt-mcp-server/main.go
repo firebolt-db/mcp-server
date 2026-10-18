@@ -43,11 +43,11 @@ func main() {
 				Name:     "transport",
 				Category: "MCP Transport",
 				Value:    "stdio",
-				Usage:    "Transport type (stdio or sse)",
+				Usage:    "Transport type (stdio, sse or streamable-http)",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_TRANSPORT"),
 				Validator: func(s string) error {
-					if s != "stdio" && s != "sse" {
-						return fmt.Errorf("invalid transport type: %s, valid options: stdio, sse", s)
+					if s != "stdio" && s != "sse" && s != "streamable-http" {
+						return fmt.Errorf("invalid transport type: %s, valid options: stdio, sse, streamable-http", s)
 					}
 					return nil
 				},
@@ -56,7 +56,7 @@ func main() {
 				Name:     "transport-sse-listen-address",
 				Category: "MCP Transport",
 				Value:    ":8080",
-				Usage:    "SSE transport listen address (used only if transport is set to sse)",
+				Usage:    "HTTP transport listen address (used only if transport is set to sse or streamable-http)",
 				Sources:  cli.EnvVars("FIREBOLT_MCP_TRANSPORT_SSE_LISTEN_ADDRESS"),
 			},
 			&cli.BoolFlag{

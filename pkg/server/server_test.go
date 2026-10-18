@@ -4,8 +4,10 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/neilotoole/slogt"
@@ -74,6 +76,37 @@ func TestServeUnsupportedTransport(t *testing.T) {
 	assert.Error(t, err, "Serve should return an error for unsupported transport")
 	assert.True(t, strings.Contains(err.Error(), "unsupported transport type"),
 		"Error message should mention unsupported transport type")
+}
+
+// TestServeStreamableHTTP checks that a Streamable HTTP client can initialize a session
+// with a bare POST, without opening an SSE stream first.
+func TestServeStreamableHTTP(t *testing.T) {
+	// Reserve a free port
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	addr := l.Addr().String()
+	require.NoError(t, l.Close())
+
+	srv := server.NewServer(slogt.New(t), "0.0.0", "streamable-http", addr, nil, nil, nil)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- srv.Serve(ctx) }()
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "0.0.0"}, nil)
+	transport := &mcp.StreamableClientTransport{Endpoint: "http://" + addr + "/mcp"}
+
+	var session *mcp.ClientSession
+	require.Eventually(t, func() bool {
+		session, err = client.Connect(t.Context(), transport, nil)
+		return err == nil
+	}, 5*time.Second, 50*time.Millisecond, "client should connect over streamable HTTP")
+
+	assert.Equal(t, "Firebolt MCP Server", session.InitializeResult().ServerInfo.Name)
+	require.NoError(t, session.Close())
+
+	cancel()
+	require.NoError(t, <-serveErr, "Serve should shut down cleanly")
 }
 
 // mockTool is a mock implementation of the Tool interface for testing.

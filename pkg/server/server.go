@@ -50,8 +50,8 @@ type ResourceTemplate interface {
 //
 // Parameters:
 //   - logger: The structured logger to use for logging.
-//   - transport: The transport type to use ("stdio" or "sse").
-//   - transportSSEAddress: The address to listen on when using SSE transport.
+//   - transport: The transport type to use ("stdio", "sse" or "streamable-http").
+//   - transportSSEAddress: The address to listen on when using an HTTP transport (SSE or Streamable HTTP).
 //   - tools: The list of tools to register with the server.
 //   - prompts: The list of prompts to register with the server.
 //   - resourceTemplates: The list of resource templates to register with the server.
@@ -107,6 +107,9 @@ func NewServer(
 	}
 }
 
+// streamableHTTPSessionTimeout is how long an idle Streamable HTTP session is kept.
+const streamableHTTPSessionTimeout = 30 * time.Minute
+
 // serverImpl is the implementation of the Server interface.
 // It wraps an MCP server and provides methods to serve it over different transports.
 type serverImpl struct {
@@ -118,13 +121,15 @@ type serverImpl struct {
 
 // Serve starts the server with the provided context and handles MCP requests
 // until the context is canceled or an error occurs.
-// It selects the appropriate transport (stdio or SSE) based on the server configuration.
+// It selects the appropriate transport (stdio, SSE or Streamable HTTP) based on the server configuration.
 func (s *serverImpl) Serve(ctx context.Context) error {
 	switch s.transport {
 	case "stdio":
 		return s.serveStdio(ctx)
 	case "sse":
 		return s.serveSSE(ctx)
+	case "streamable-http":
+		return s.serveStreamableHTTP(ctx)
 	default:
 		return errors.New("unsupported transport type: " + s.transport)
 	}
@@ -145,6 +150,28 @@ func (s *serverImpl) serveSSE(ctx context.Context) error {
 		return s.inner
 	}, nil)
 
+	return s.serveHTTP(ctx, handler)
+}
+
+// serveStreamableHTTP starts the server using the Streamable HTTP transport.
+// Idle sessions are closed after streamableHTTPSessionTimeout so that clients
+// which never send DELETE do not leak sessions.
+func (s *serverImpl) serveStreamableHTTP(ctx context.Context) error {
+	s.logger.Info("Using streamable-http transport", "listen_address", s.transportSSEAddress)
+
+	handler := mcp.NewStreamableHTTPHandler(func(request *http.Request) *mcp.Server {
+		return s.inner
+	}, &mcp.StreamableHTTPOptions{
+		Logger:         s.logger,
+		SessionTimeout: streamableHTTPSessionTimeout,
+	})
+
+	return s.serveHTTP(ctx, handler)
+}
+
+// serveHTTP serves the given handler on the configured listen address until
+// the context is canceled.
+func (s *serverImpl) serveHTTP(ctx context.Context, handler http.Handler) error {
 	// Configure the HTTP server
 	srv := &http.Server{
 		Addr:    s.transportSSEAddress,

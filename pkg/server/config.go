@@ -22,7 +22,7 @@ type Config struct {
 func (c Config) Validate() error {
 	return validation.ValidateStruct(&c,
 		validation.Field(&c.Transport, validation.Required),
-		validation.Field(&c.TransportSSEListenAddress, validation.When(c.Transport == "sse", validation.Required)),
+		validation.Field(&c.TransportSSEListenAddress, validation.When(c.Transport == "sse" || c.Transport == "streamable-http", validation.Required)),
 		validation.Field(&c.ClientID, validation.When(c.CoreURL == "", validation.Required)),
 		validation.Field(&c.ClientSecret, validation.When(c.CoreURL == "", validation.Required)),
 		validation.Field(&c.Environment, validation.Required),
