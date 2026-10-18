@@ -257,6 +257,10 @@ Streamable HTTP is the current MCP HTTP transport, required by gateways and clie
 To enable it, set `--transport` (or `FIREBOLT_MCP_TRANSPORT`) to `streamable-http`.
 The server listens on the same `--transport-sse-listen-address` (default `:8080`) and serves MCP on any path, e.g. `http://<host>:8080/mcp`.
 
+Both HTTP transports accept only `Content-Type: application/json` POSTs, so a web page cannot send MCP requests to the server from another origin.
+Requests that reach the server on a loopback address must carry a loopback `Host` header such as `localhost:8080`, otherwise they are rejected with `403` to block DNS rebinding.
+A reverse proxy on the same host must therefore forward a loopback `Host` header, or connect to a non-loopback address.
+
 #### Requiring LLMs to present docs read proof before connecting
 
 To provide wider context to LLMs before connecting to Firebolt and running queries, by default `firebolt_connect` tool
