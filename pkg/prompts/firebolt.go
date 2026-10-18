@@ -21,7 +21,8 @@ func NewFireboltExpert() *FireboltExpert {
 
 func (p *FireboltExpert) Prompt() *mcp.Prompt {
 	return &mcp.Prompt{
-		Name:        "Firebolt Expert",
+		Name:        "firebolt_expert",
+		Title:       "Firebolt Expert",
 		Description: fireboltPromptDescription,
 	}
 }
