@@ -37,7 +37,7 @@ graph TD
         end
         
         subgraph "Prompts"
-            FireboltExpert["Firebolt Expert"]
+            FireboltExpert["firebolt_expert"]
         end
     end
     
@@ -86,10 +86,10 @@ graph TD
 
 ### 1. MCP Server
 
-The server component (`pkg/server/server.go`) is the central part of the application that manages communication with LLM clients and orchestrates interactions between tools, resources, and prompts. It implements the Model Context Protocol using the `mark3labs/mcp-go` library.
+The server component (`pkg/server/server.go`) is the central part of the application that manages communication with LLM clients and orchestrates interactions between tools, resources, and prompts. It implements the Model Context Protocol using the `modelcontextprotocol/go-sdk` library.
 
 Key features:
-- Supports multiple transport methods (stdio, SSE)
+- Supports multiple transport methods (stdio, SSE, Streamable HTTP)
 - Handles request routing to appropriate tools and resources
 - Manages lifecycle of connections and interactions
 
@@ -242,7 +242,7 @@ The server authenticates with Firebolt using OAuth2 client credentials (client I
 Security features:
 - No credential storage - credentials are passed as environment variables or command line arguments
 - Connection pool management to avoid credential leakage
-- Secure transport options (stdio, SSE)
+- Secure transport options (stdio, SSE, Streamable HTTP)
 
 ### Connection Pooling
 

@@ -286,7 +286,7 @@ Firebolt MCP Server implements the [Model Context Protocol](https://modelcontext
     - Lists of Accounts, Databases, Engines
 
 3. **Prompts** - Predefined instructions for the LLM:
-    - Firebolt Expert: Prompts the model to act as a Firebolt specialist
+    - `firebolt_expert`: Prompts the model to act as a Firebolt specialist
 
 ## Development
 
