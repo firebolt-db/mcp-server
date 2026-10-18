@@ -265,6 +265,98 @@ func TestSSERejectsBrowserAttacks(t *testing.T) {
 	require.NoError(t, recv(t, serveErr, "Serve to return"))
 }
 
+// TestServeWaitsForInFlightRequests checks that shutdown lets a running tool call finish,
+// and returns as soon as it does.
+func TestServeWaitsForInFlightRequests(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	addr := freeAddr(t)
+	srv := server.NewServer(slogt.New(t), "0.0.0", "streamable-http", addr,
+		[]server.Tool{&funcTool{name: "slow_tool", fn: func(context.Context) {
+			close(started)
+			<-release
+		}}},
+		nil,
+		nil,
+	)
+	server.SetShutdownTimeout(srv, 3*time.Second)
+	cancel, serveErr := serve(t, srv)
+	// Without the standalone stream, the tool call is the only open request.
+	session := connect(t, addr, false)
+
+	callErr := make(chan error, 1)
+	go func() {
+		_, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "slow_tool"})
+		callErr <- err
+	}()
+	recv(t, started, "tool to start")
+
+	cancel()
+	select {
+	case err := <-serveErr:
+		t.Fatalf("Serve returned while a tool call was running: %v", err)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	close(release)
+	require.NoError(t, recv(t, callErr, "tool call to finish"), "the running tool call should complete")
+	start := time.Now()
+	require.NoError(t, recv(t, serveErr, "Serve to return"))
+	assert.Less(t, time.Since(start), time.Second, "Serve should not wait for the shutdown timeout")
+}
+
+// TestServeClosesConnectionsAfterShutdownTimeout checks that a request still running when the
+// shutdown timeout expires is cut off instead of keeping the server alive.
+func TestServeClosesConnectionsAfterShutdownTimeout(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	addr := freeAddr(t)
+	srv := server.NewServer(slogt.New(t), "0.0.0", "streamable-http", addr,
+		[]server.Tool{&funcTool{name: "stuck_tool", fn: func(context.Context) {
+			close(started)
+			<-release
+		}}},
+		nil,
+		nil,
+	)
+	server.SetShutdownTimeout(srv, 100*time.Millisecond)
+	cancel, serveErr := serve(t, srv)
+	session := connect(t, addr, true)
+
+	callErr := make(chan error, 1)
+	go func() {
+		_, err := session.CallTool(t.Context(), &mcp.CallToolParams{Name: "stuck_tool"})
+		callErr <- err
+	}()
+	recv(t, started, "tool to start")
+
+	cancel()
+	start := time.Now()
+	require.NoError(t, recv(t, serveErr, "Serve to return"))
+	assert.Less(t, time.Since(start), time.Second, "Serve should return soon after the shutdown timeout")
+	require.Error(t, recv(t, callErr, "tool call to fail"), "the cut-off tool call should fail")
+}
+
+// TestServeCanceledContext checks that Serve returns cleanly when its context is already canceled.
+func TestServeCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	srv := server.NewServer(slogt.New(t), "0.0.0", "streamable-http", freeAddr(t), nil, nil, nil)
+	assert.NoError(t, srv.Serve(ctx))
+}
+
+// TestServeReturnsListenError checks that Serve reports a listen address that is already in use.
+func TestServeReturnsListenError(t *testing.T) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = l.Close() })
+
+	srv := server.NewServer(slogt.New(t), "0.0.0", "streamable-http", l.Addr().String(), nil, nil, nil)
+	assert.Error(t, srv.Serve(t.Context()))
+}
+
 const initializeRequest = `{"jsonrpc":"2.0","id":1,"method":"initialize",` +
 	`"params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"test","version":"0.0.0"}}}`
 

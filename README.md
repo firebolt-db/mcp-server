@@ -260,6 +260,7 @@ The server listens on the same `--transport-sse-listen-address` (default `:8080`
 Both HTTP transports accept only `Content-Type: application/json` POSTs, so a web page cannot send MCP requests to the server from another origin.
 Requests that reach the server on a loopback address must carry a loopback `Host` header such as `localhost:8080`, otherwise they are rejected with `403` to block DNS rebinding.
 A reverse proxy on the same host must therefore forward a loopback `Host` header, or connect to a non-loopback address.
+On shutdown, in-flight requests get up to 5 seconds to finish.
 
 #### Requiring LLMs to present docs read proof before connecting
 
