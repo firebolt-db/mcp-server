@@ -110,6 +110,9 @@ func NewServer(
 // streamableHTTPSessionTimeout is how long an idle Streamable HTTP session is kept.
 const streamableHTTPSessionTimeout = 30 * time.Minute
 
+// httpReadHeaderTimeout bounds how long a client may take to send request headers.
+const httpReadHeaderTimeout = 10 * time.Second
+
 // serverImpl is the implementation of the Server interface.
 // It wraps an MCP server and provides methods to serve it over different transports.
 type serverImpl struct {
@@ -174,8 +177,9 @@ func (s *serverImpl) serveStreamableHTTP(ctx context.Context) error {
 func (s *serverImpl) serveHTTP(ctx context.Context, handler http.Handler) error {
 	// Configure the HTTP server
 	srv := &http.Server{
-		Addr:    s.transportSSEAddress,
-		Handler: handler,
+		Addr:              s.transportSSEAddress,
+		Handler:           handler,
+		ReadHeaderTimeout: httpReadHeaderTimeout,
 	}
 
 	go func() {

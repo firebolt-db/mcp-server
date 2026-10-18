@@ -10,7 +10,7 @@ import (
 )
 
 // TestFireboltExpertName checks that the prompt name is a valid identifier.
-// MCP gateways such as Obot reject prompt names outside [A-Za-z0-9_.-].
+// Some MCP gateways and clients reject prompt names outside [A-Za-z0-9_.-].
 func TestFireboltExpertName(t *testing.T) {
 	prompt := prompts.NewFireboltExpert().Prompt()
 
