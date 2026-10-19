@@ -1,5 +1,29 @@
 # Changelog
 
+## [1.0.0](https://github.com/firebolt-db/mcp-server/compare/v0.6.0...v1.0.0) (2026-10-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** add streamable-http transport ([#81](https://github.com/firebolt-db/mcp-server/issues/81))
+
+### Features
+
+* **server:** add streamable-http transport ([#81](https://github.com/firebolt-db/mcp-server/issues/81)) ([9713ba4](https://github.com/firebolt-db/mcp-server/commit/9713ba460f922b1d3b495c05ebec48de4476035c))
+
+
+### Bug Fixes
+
+* **server:** block cross-site tool calls and drain requests on shutdown ([#82](https://github.com/firebolt-db/mcp-server/issues/82)) ([bf68432](https://github.com/firebolt-db/mcp-server/commit/bf68432a28da072af1438bb260fb5c310fdb95a5))
+* validate database connection parameters ([#79](https://github.com/firebolt-db/mcp-server/issues/79)) ([d240c04](https://github.com/firebolt-db/mcp-server/commit/d240c0415ffd7ac7fff85c3e4c0beb6bc6e7881d))
+
+
+### Dependencies
+
+* **github-actions:** bump the github-actions-deps group across 1 directory with 7 updates ([#77](https://github.com/firebolt-db/mcp-server/issues/77)) ([d9f59ba](https://github.com/firebolt-db/mcp-server/commit/d9f59ba171960bb61da4a8bbb51cfe923fde8e8a))
+* **gomod:** bump github.com/antchfx/xpath from 1.3.5 to 1.3.6 ([#76](https://github.com/firebolt-db/mcp-server/issues/76)) ([08332f3](https://github.com/firebolt-db/mcp-server/commit/08332f36c377b148e824311de9494776057a3409))
+* **gomod:** bump the go-deps group across 1 directory with 8 updates ([#84](https://github.com/firebolt-db/mcp-server/issues/84)) ([aafedab](https://github.com/firebolt-db/mcp-server/commit/aafedab823543ab4ed16a3580fde3f3065cafe33))
+
 ## [0.6.0](https://github.com/firebolt-db/mcp-server/compare/v0.5.0...v0.6.0) (2026-01-26)
 
 
