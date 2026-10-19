@@ -81,6 +81,7 @@ func (t *Connect) Tool() *mcp.Tool {
 		Title: "Firebolt Connect",
 		Description: "Returns a list of Firebolt accounts, databases, and engines you have access to. " +
 			"This information is required before using the `firebolt_query` tool.",
+		Annotations: tools.ReadOnlyAnnotations(),
 	}
 }
 

@@ -271,6 +271,24 @@ While this provides a good starting point for LLMs ensuring it has full context 
 
 To disable this requirement, set the `--skip-docs-proof` CLI bool flag (or the `FIREBOLT_MCP_SKIP_DOCS_PROOF` environment variable) to `false`.
 
+#### Read-only mode
+
+Set the `--read-only` CLI bool flag (or the `FIREBOLT_MCP_READ_ONLY` environment variable) to restrict `firebolt_query`
+to a single `SELECT` or `WITH` statement and declare it read-only in its MCP tool annotations
+(`readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false`).
+Clients that cache results of read-only tools can then replay them instead of re-running the query.
+
+The statement check skips comments, string literals and quoted identifiers. It rejects a second statement after `;`,
+any statement that does not start with `SELECT` or `WITH`, and any bare write or DDL keyword (`INSERT`, `UPDATE`, `DELETE`, `MERGE`,
+`TRUNCATE`, `COPY`, `CREATE`, `ALTER`, `DROP`, `UNDROP`, `VACUUM`, `GRANT`, `REVOKE`, `CALL`).
+It is conservative: `SHOW`, `EXPLAIN` and pipe syntax starting with `FROM` are rejected, and so is an unquoted identifier that matches one of these keywords.
+
+The check is defence in depth and is not a security boundary. Enable read-only mode only when the service account's
+Firebolt role has no write or DDL privileges. Clients trust the annotation and may cache and replay results.
+
+The other tools (`firebolt_connect`, `firebolt_connect_core`, `firebolt_docs_overview`, `firebolt_docs_llm`, `firebolt_docs_search`)
+never write, so they always declare `readOnlyHint: true`.
+
 ## Architecture
 
 Firebolt MCP Server implements the [Model Context Protocol](https://modelcontextprotocol.io/introduction), providing:

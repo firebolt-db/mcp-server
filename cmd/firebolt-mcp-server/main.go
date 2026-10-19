@@ -105,6 +105,14 @@ func main() {
 					"will not be forced to gather more starting context and become smarter, but this means more tokens consumed and slower responses.",
 				Sources: cli.EnvVars("FIREBOLT_MCP_SKIP_DOCS_PROOF"),
 			},
+			&cli.BoolFlag{
+				Name:     "read-only",
+				Category: "MCP Tools Configuration",
+				Value:    false,
+				Usage: "Accept only a single SELECT or WITH statement in firebolt_query and annotate it as read-only, " +
+					"so MCP clients may cache its results. Use only with a Firebolt user whose role cannot write.",
+				Sources: cli.EnvVars("FIREBOLT_MCP_READ_ONLY"),
+			},
 		},
 		Action: run,
 	}
@@ -129,6 +137,7 @@ func run(ctx context.Context, cmd *cli.Command) error {
 		Environment:               cmd.String("environment"),
 		CoreURL:                   cmd.String("core-url"),
 		SkipDocsProof:             cmd.Bool("skip-docs-proof"),
+		ReadOnly:                  cmd.Bool("read-only"),
 	}
 
 	if err := cfg.Validate(); err != nil {
