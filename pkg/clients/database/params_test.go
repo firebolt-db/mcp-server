@@ -66,6 +66,16 @@ func TestConnectionParams_DSN(t *testing.T) {
 			},
 			expected: "firebolt://?account_name=test-account&client_id=test-client&client_secret=test-secret",
 		},
+		{
+			name: "escaped values",
+			params: database.ConnectionParams{
+				ClientID:     "test+client",
+				ClientSecret: "test-secret+%2Bvalue",
+				AccountName:  "test-account",
+				EngineName:   strPtr("test%engine"),
+			},
+			expected: "firebolt://?account_name=test-account&client_id=test%2Bclient&client_secret=test-secret%2B%252Bvalue&engine=test%25engine",
+		},
 	}
 
 	for _, tt := range tests {
@@ -91,6 +101,15 @@ func TestConnectionParams_String(t *testing.T) {
 				EngineName:   strPtr("test-engine"),
 			},
 			expected: "firebolt:///test-db?account_name=test-account&client_id=xxxxx&client_secret=xxxxx&engine=test-engine",
+		},
+		{
+			name: "masks escaped sensitive information",
+			params: database.ConnectionParams{
+				ClientID:     "sensitive+client-id",
+				ClientSecret: "sensitive+%secret",
+				AccountName:  "test-account",
+			},
+			expected: "firebolt://?account_name=test-account&client_id=xxxxx&client_secret=xxxxx",
 		},
 	}
 
@@ -143,6 +162,9 @@ func TestCoreConnectionParams_Validate(t *testing.T) {
 	require.NoError(t, params.Validate())
 	params.DatabaseName = nil
 	require.NoError(t, params.Validate())
+	escaped := params
+	escaped.URL += "/a+b%2Bc"
+	require.NoError(t, escaped.Validate())
 
 	for _, name := range []string{"test_db?url=http://127.0.0.1:1", "test_db/other", "test_db&engine=other"} {
 		invalid := params

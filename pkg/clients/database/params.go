@@ -12,6 +12,9 @@ import (
 
 const secretMask = "xxxxx"
 
+// The driver query-unescapes DSN parameter values.
+var dsnValueEscaper = strings.NewReplacer("%", "%25", "+", "%2B")
+
 // PoolParams holds the parameters required to create a connection in the pool.
 // The pool will convert these parameters into a ConnectionParams struct by adding the ClientID and ClientSecret.
 type PoolParams struct {
@@ -34,7 +37,8 @@ type ConnectionParams struct {
 // The format is similar to a DSN, but sensitive information (ClientID and ClientSecret) is masked,
 // making this string safe to log or display.
 func (c ConnectionParams) String() string {
-	return strings.NewReplacer(c.ClientID, secretMask, c.ClientSecret, secretMask).Replace(c.DSN())
+	c.ClientID, c.ClientSecret = secretMask, secretMask
+	return c.DSN()
 }
 
 // DriverName returns the name of the database driver.
@@ -55,10 +59,12 @@ func (c ConnectionParams) DSN() string {
 
 	engineName := ""
 	if c.EngineName != nil {
-		engineName = "&engine=" + *c.EngineName
+		engineName = "&engine=" + dsnValueEscaper.Replace(*c.EngineName)
 	}
 
-	return fmt.Sprintf("firebolt://%s?account_name=%s&client_id=%s&client_secret=%s%s", dbName, c.AccountName, c.ClientID, c.ClientSecret, engineName)
+	return fmt.Sprintf("firebolt://%s?account_name=%s&client_id=%s&client_secret=%s%s", dbName,
+		dsnValueEscaper.Replace(c.AccountName), dsnValueEscaper.Replace(c.ClientID),
+		dsnValueEscaper.Replace(c.ClientSecret), engineName)
 }
 
 // Validate checks that the driver parses every field unchanged.
@@ -108,7 +114,7 @@ func (c CoreConnectionParams) DSN() string {
 		dbName = "/" + *c.DatabaseName
 	}
 
-	return fmt.Sprintf("firebolt://%s?url=%s", dbName, c.URL)
+	return fmt.Sprintf("firebolt://%s?url=%s", dbName, dsnValueEscaper.Replace(c.URL))
 }
 
 // Validate checks that only the configured URL and database are selected.
