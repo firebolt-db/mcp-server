@@ -52,6 +52,9 @@ func TestQuery_Handler_ReadOnly_Allows(t *testing.T) {
 		`SELECT "update", "delete" FROM t`,
 		"SELECT 1 -- DROP TABLE t",
 		"SELECT updated_at, created_by FROM t",
+		"SELECT $$drop table t; -- not a comment$$ AS s",
+		"SELECT $q$it's $$ nested; delete$q$ AS s",
+		"SELECT a$b FROM t",
 	}
 
 	for _, q := range queries {
@@ -106,6 +109,12 @@ func TestQuery_Handler_ReadOnly_Rejects(t *testing.T) {
 		"WITH x AS (SELECT 1) INSERT INTO t SELECT * FROM x",
 		"SELECT * FROM t; -- ok\nDELETE FROM t",
 		`SELECT E'\'' ; DROP TABLE t; --'`,
+		"SELECT $$ -- $$; DROP TABLE t",
+		"SELECT $$ /* $$; DROP TABLE t /* */",
+		"SELECT $$ ' $$; DELETE FROM t --'",
+		"WITH x AS (SELECT $$--$$) INSERT INTO t SELECT * FROM x",
+		"SELECT $tag$ -- $tag$; DROP TABLE t",
+		"SELECT $$unterminated",
 		"SELECT 'unterminated",
 		"SELECT /* unterminated",
 		"",

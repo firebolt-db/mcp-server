@@ -74,6 +74,12 @@ func scanWords(sql string) ([]string, error) {
 		case c == ';':
 			ended = true
 			i++
+		case c == '$' && (i == 0 || !isIdentPart(r[i-1])):
+			j, err := skipDollarQuoted(r, i)
+			if err != nil {
+				return nil, err
+			}
+			i = j
 		case c == '\'' || c == '"':
 			backslashEscapes := c == '\'' && isEscapeStringPrefix(r, i)
 			j, err := skipQuoted(r, i, backslashEscapes)
@@ -112,6 +118,27 @@ func skipQuoted(r []rune, start int, backslashEscapes bool) (int, error) {
 		}
 	}
 	return 0, errors.New("bad request: read-only mode: unterminated quoted string")
+}
+
+// skipDollarQuoted returns the index just past a $$...$$ or $tag$...$tag$ literal starting
+// at r[start], or start+1 when the `$` does not open one (for example a $1 parameter).
+func skipDollarQuoted(r []rune, start int) (int, error) {
+	j := start + 1
+	if j < len(r) && isIdentStart(r[j]) {
+		for j < len(r) && (isIdentStart(r[j]) || unicode.IsDigit(r[j])) {
+			j++
+		}
+	}
+	if j >= len(r) || r[j] != '$' {
+		return start + 1, nil
+	}
+	tag := r[start : j+1]
+	for k := j + 1; k+len(tag) <= len(r); k++ {
+		if string(r[k:k+len(tag)]) == string(tag) {
+			return k + len(tag), nil
+		}
+	}
+	return 0, errors.New("bad request: read-only mode: unterminated dollar-quoted string")
 }
 
 // isEscapeStringPrefix reports whether the quote at r[i] opens an E'...' escape string.
