@@ -104,6 +104,7 @@ func NewServer(
 		inner:               mcpSrv,
 		transport:           transport,
 		transportSSEAddress: transportSSEAddress,
+		shutdownTimeout:     httpShutdownTimeout,
 	}
 }
 
@@ -113,6 +114,9 @@ const streamableHTTPSessionTimeout = 30 * time.Minute
 // httpReadHeaderTimeout bounds how long a client may take to send request headers.
 const httpReadHeaderTimeout = 10 * time.Second
 
+// httpShutdownTimeout bounds how long in-flight HTTP requests may run after shutdown starts.
+const httpShutdownTimeout = 5 * time.Second
+
 // serverImpl is the implementation of the Server interface.
 // It wraps an MCP server and provides methods to serve it over different transports.
 type serverImpl struct {
@@ -120,6 +124,7 @@ type serverImpl struct {
 	inner               *mcp.Server
 	transport           string
 	transportSSEAddress string
+	shutdownTimeout     time.Duration
 }
 
 // Serve starts the server with the provided context and handles MCP requests
@@ -173,25 +178,34 @@ func (s *serverImpl) serveStreamableHTTP(ctx context.Context) error {
 }
 
 // serveHTTP serves the given handler on the configured listen address until
-// the context is canceled.
+// the context is canceled, then waits for in-flight requests to finish.
 func (s *serverImpl) serveHTTP(ctx context.Context, handler http.Handler) error {
-	// Configure the HTTP server
 	srv := &http.Server{
 		Addr:              s.transportSSEAddress,
 		Handler:           handler,
 		ReadHeaderTimeout: httpReadHeaderTimeout,
 	}
 
-	go func() {
-		<-ctx.Done()
-		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
-		defer cancel()
-		if err := srv.Shutdown(ctx); err != nil {
-			s.logger.Warn("error shutting down server gracefully", "error", err)
-		}
-	}()
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- srv.ListenAndServe() }()
 
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	select {
+	case err := <-serveErr:
+		return err
+	case <-ctx.Done():
+	}
+
+	// Long-lived streams never finish on their own, so they are closed once the timeout expires.
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), s.shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		s.logger.Warn("closing connections still open after shutdown timeout", "error", err)
+		if err := srv.Close(); err != nil {
+			s.logger.Warn("error closing server", "error", err)
+		}
+	}
+
+	if err := <-serveErr; !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 

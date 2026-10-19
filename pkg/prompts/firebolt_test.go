@@ -14,6 +14,7 @@ import (
 func TestFireboltExpertName(t *testing.T) {
 	prompt := prompts.NewFireboltExpert().Prompt()
 
+	assert.Equal(t, "firebolt_expert", prompt.Name)
 	assert.Regexp(t, regexp.MustCompile(`^[A-Za-z0-9_.-]+$`), prompt.Name)
 	assert.Equal(t, "Firebolt Expert", prompt.Title)
 }

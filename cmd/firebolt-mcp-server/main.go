@@ -29,6 +29,8 @@ func main() {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
+	// Stop catching signals once shutdown starts, so a second signal has its usual effect.
+	context.AfterFunc(ctx, cancel)
 
 	cmd := &cli.Command{
 		Name:    "firebolt-mcp-server",
