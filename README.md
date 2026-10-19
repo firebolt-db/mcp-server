@@ -251,6 +251,11 @@ To enable SSE, set the `--transport` CLI flag (or the `FIREBOLT_MCP_TRANSPORT` e
 
 Optionally, you can specify the address the server should listen on by setting the `--transport-sse-listen-address` CLI flag (or the `FIREBOLT_MCP_TRANSPORT_SSE_LISTEN_ADDRESS` environment variable).
 
+#### Using Streamable HTTP Transport
+
+Streamable HTTP is the current MCP HTTP transport, required by gateways and clients that do not speak legacy SSE.
+To enable it, set `--transport` (or `FIREBOLT_MCP_TRANSPORT`) to `streamable-http`.
+The server listens on the same `--transport-sse-listen-address` (default `:8080`) and serves MCP on any path, e.g. `http://<host>:8080/mcp`.
 
 #### Requiring LLMs to present docs read proof before connecting
 

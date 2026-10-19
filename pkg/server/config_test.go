@@ -43,6 +43,19 @@ func TestConfig(t *testing.T) {
 				c.TransportSSEListenAddress = ""
 			},
 		},
+		"valid streamable HTTP config": {
+			setup: func(c *server.Config) {
+				c.Transport = "streamable-http"
+			},
+			isValid: true,
+		},
+		"missing transport streamable HTTP listen address": {
+			setup: func(c *server.Config) {
+				c.Transport = "streamable-http"
+				c.TransportSSEListenAddress = ""
+			},
+			isValid: false,
+		},
 		"missing environment": {
 			setup: func(c *server.Config) {
 				c.Environment = ""
