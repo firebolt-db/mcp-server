@@ -107,14 +107,15 @@ func (c CoreConnectionParams) DriverName() string {
 
 // DSN returns the Data Source Name expected by the Firebolt Go SDK.
 // This is a connection string that contains all the necessary information to connect to the Firebolt Core database.
-// The format follows the pattern: firebolt://[/database]?url=core_instance_url
+// The format follows the pattern: firebolt://[/database]?url=core_instance_url&client_side_lb=false
 func (c CoreConnectionParams) DSN() string {
 	dbName := ""
 	if c.DatabaseName != nil {
 		dbName = "/" + *c.DatabaseName
 	}
 
-	return fmt.Sprintf("firebolt://%s?url=%s", dbName, dsnValueEscaper.Replace(c.URL))
+	// Client-side LB round-robins resolved IPs without failover, breaking single-stack localhost listeners.
+	return fmt.Sprintf("firebolt://%s?url=%s&client_side_lb=false", dbName, dsnValueEscaper.Replace(c.URL))
 }
 
 // Validate checks that only the configured URL and database are selected.
