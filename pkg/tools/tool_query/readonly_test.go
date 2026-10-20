@@ -53,6 +53,7 @@ func TestQuery_Handler_ReadOnly_Allows(t *testing.T) {
 		"SELECT $$drop table t -- not a comment$$ AS s",
 		"SELECT a$b, $c, $d$ FROM t",
 		"SELECT * FROM t WHERE a = $1",
+		"SELECT 1_000, 1.5e10, .5, 2e-3, t.a FROM t",
 		`SELECT regexp_like(s, '\d+') FROM t`,
 		`SELECT 'C:\\' AS p`,
 	}
@@ -116,6 +117,10 @@ func TestQuery_Handler_ReadOnly_Rejects(t *testing.T) {
 		"SELECT 1 AS $tag$; DROP TABLE t; $tag$",
 		"SELECT $q$it's $$ nested; delete$q$ AS s",
 		"SELECT 1$$ -- $$; DROP TABLE t",
+		"SELECT 1_000$$ -- $$; DROP TABLE t",
+		"SELECT 1e5$$ -- $$; DROP TABLE t",
+		"SELECT 1.5e5$$ -- $$; DROP TABLE t",
+		"SELECT .5e3$$ -- $$; DROP TABLE t",
 		`SELECT 'x\' AS a -- ' ; DROP TABLE t`,
 		`SELECT 1 FROM t WHERE c = 'C:\' -- ' ; DROP TABLE t`,
 		`SELECT 1 AS "x\" -- " ; DROP TABLE t`,

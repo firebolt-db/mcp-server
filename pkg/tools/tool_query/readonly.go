@@ -12,8 +12,8 @@ import (
 )
 
 // writeKeywords are rejected anywhere in a read-only query, outside of literals and comments.
-// This catches data-modifying CTEs such as `WITH x AS (...) INSERT INTO ...` and `SELECT ... INTO t`,
-// which creates a table.
+// This catches writes inside a SELECT or WITH, such as `WITH x AS (...) INSERT INTO ...` and
+// `SELECT ... INTO t`, which creates a table.
 var writeKeywords = map[string]struct{}{
 	"INSERT": {}, "UPDATE": {}, "DELETE": {}, "MERGE": {}, "TRUNCATE": {}, "COPY": {},
 	"CREATE": {}, "ALTER": {}, "DROP": {}, "UNDROP": {}, "VACUUM": {},
@@ -104,6 +104,8 @@ func scanWords(sql string, standardStrings bool) ([]string, error) {
 		case c == ';':
 			ended = true
 			i++
+		case isDigit(c) || c == '.' && i+1 < n && isDigit(r[i+1]):
+			i = skipNumber(r, i)
 		case c == '$' && i+1 < n && r[i+1] == '$':
 			j, err := skipDollarQuoted(r, i)
 			if err != nil {
@@ -168,11 +170,64 @@ func skipDollarQuoted(r []rune, start int) (int, error) {
 	return 0, errors.New("bad request: read-only mode: unterminated dollar-quoted string")
 }
 
+// skipNumber returns the index just past the numeric literal starting at r[start]. Like the
+// Firebolt lexer it takes `1_000`, `1.5e10` and `.5` whole, so a following `$$` opens a literal.
+func skipNumber(r []rune, start int) int {
+	i := start
+	if r[i] != '.' {
+		i = skipDigits(r, i)
+		if i >= len(r) || r[i] != '.' {
+			return skipExponent(r, i)
+		}
+	}
+	i++
+	if i < len(r) && isDigit(r[i]) {
+		i = skipDigits(r, i)
+	}
+	return skipExponent(r, i)
+}
+
+// skipDigits skips `[0-9](_?[0-9])*` starting at r[start], which must be a digit.
+func skipDigits(r []rune, start int) int {
+	i := start + 1
+	for i < len(r) {
+		switch {
+		case isDigit(r[i]):
+			i++
+		case r[i] == '_' && i+1 < len(r) && isDigit(r[i+1]):
+			i += 2
+		default:
+			return i
+		}
+	}
+	return i
+}
+
+// skipExponent skips `[eE][-+]?[0-9]...` at r[start] if it is there.
+func skipExponent(r []rune, start int) int {
+	i := start
+	if i >= len(r) || (r[i] != 'e' && r[i] != 'E') {
+		return start
+	}
+	i++
+	if i < len(r) && (r[i] == '+' || r[i] == '-') {
+		i++
+	}
+	if i >= len(r) || !isDigit(r[i]) {
+		return start
+	}
+	return skipDigits(r, i)
+}
+
+func isDigit(c rune) bool {
+	return c >= '0' && c <= '9'
+}
+
 // isIdentStart and isIdentPart follow Firebolt's unquoted identifiers, `[A-Za-z_][A-Za-z0-9_$]*`.
 func isIdentStart(c rune) bool {
 	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c == '_'
 }
 
 func isIdentPart(c rune) bool {
-	return isIdentStart(c) || c >= '0' && c <= '9' || c == '$'
+	return isIdentStart(c) || isDigit(c) || c == '$'
 }
