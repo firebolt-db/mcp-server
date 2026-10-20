@@ -70,7 +70,6 @@ func (t *Query) Tool() *mcp.Tool {
 			ReadOnlyHint:    true,
 			DestructiveHint: tools.Ptr(false),
 			IdempotentHint:  true,
-			OpenWorldHint:   tools.Ptr(false),
 		}
 	}
 	return tool

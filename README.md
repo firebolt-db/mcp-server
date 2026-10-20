@@ -275,7 +275,7 @@ To disable this requirement, set the `--skip-docs-proof` CLI bool flag (or the `
 
 Set the `--read-only` CLI bool flag (or the `FIREBOLT_MCP_READ_ONLY` environment variable) to restrict `firebolt_query`
 to a single `SELECT` or `WITH` statement and declare it read-only in its MCP tool annotations
-(`readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false`).
+(`readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`).
 Clients that cache results of read-only tools can then replay them instead of re-running the query.
 
 The statement check follows the Firebolt lexer. It skips comments, string literals (including dollar-quoted `$$...$$`) and quoted identifiers.

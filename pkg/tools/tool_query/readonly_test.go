@@ -29,8 +29,7 @@ func TestQuery_Tool_Annotations(t *testing.T) {
 		assert.True(t, tool.Annotations.IdempotentHint)
 		require.NotNil(t, tool.Annotations.DestructiveHint)
 		assert.False(t, *tool.Annotations.DestructiveHint)
-		require.NotNil(t, tool.Annotations.OpenWorldHint)
-		assert.False(t, *tool.Annotations.OpenWorldHint)
+		assert.Nil(t, tool.Annotations.OpenWorldHint, "SELECT can read external data such as S3 files")
 		assert.Contains(t, tool.Description, "Read-only")
 	})
 }
