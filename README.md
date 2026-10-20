@@ -283,6 +283,8 @@ It rejects a second statement after `;`, any statement that does not start with 
 (`INSERT`, `UPDATE`, `DELETE`, `MERGE`, `TRUNCATE`, `COPY`, `CREATE`, `ALTER`, `DROP`, `UNDROP`, `VACUUM`, `GRANT`, `REVOKE`, `CALL`, `INTO`).
 The Firebolt Go SDK splits statements on the client with a MySQL-style tokenizer, so a query is also rejected unless the SDK sees exactly one statement.
 As a result, a comment after the final `;` and a `;` inside a `$$...$$` literal are rejected.
+Regular strings are also checked as if a backslash escaped the next character, because a trailing `WITH standard_conforming_strings = false`
+makes the engine read them that way. A regular string that ends in an odd number of backslashes, such as `'C:\'`, is therefore rejected.
 It is conservative: `SHOW`, `EXPLAIN` and pipe syntax starting with `FROM` are rejected, and so is an unquoted identifier that matches one of these keywords.
 
 The check is defence in depth and is not a security boundary. Enable read-only mode only when the service account's

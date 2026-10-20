@@ -26,20 +26,11 @@ var errMultipleStatements = errors.New("bad request: read-only mode: only a sing
 // It is defence in depth on top of the Firebolt role's grants, not a substitute for them:
 // a keyword scan can be bypassed, the role cannot.
 func validateReadOnly(ctx context.Context, sql string) error {
-	words, err := scanWords(sql)
-	if err != nil {
-		return err
-	}
-	if len(words) == 0 {
-		return errors.New("bad request: read-only mode: query contains no statement")
-	}
-
-	if first := words[0]; first != "SELECT" && first != "WITH" {
-		return fmt.Errorf("bad request: read-only mode: only SELECT or WITH statements are allowed, got %s", first)
-	}
-	for _, w := range words {
-		if _, ok := writeKeywords[w]; ok {
-			return fmt.Errorf("bad request: read-only mode: %s is not allowed", w)
+	// A trailing `WITH standard_conforming_strings = false` makes the engine re-parse the statement
+	// with backslash escapes in regular strings, so the check must hold in both string modes.
+	for _, standardStrings := range []bool{true, false} {
+		if err := checkWords(sql, standardStrings); err != nil {
+			return err
 		}
 	}
 
@@ -59,10 +50,30 @@ func validateReadOnly(ctx context.Context, sql string) error {
 	return nil
 }
 
+func checkWords(sql string, standardStrings bool) error {
+	words, err := scanWords(sql, standardStrings)
+	if err != nil {
+		return err
+	}
+	if len(words) == 0 {
+		return errors.New("bad request: read-only mode: query contains no statement")
+	}
+
+	if first := words[0]; first != "SELECT" && first != "WITH" {
+		return fmt.Errorf("bad request: read-only mode: only SELECT or WITH statements are allowed, got %s", first)
+	}
+	for _, w := range words {
+		if _, ok := writeKeywords[w]; ok {
+			return fmt.Errorf("bad request: read-only mode: %s is not allowed", w)
+		}
+	}
+	return nil
+}
+
 // scanWords returns the upper-cased bare words of sql, skipping string literals, quoted
 // identifiers and comments. It follows the Firebolt lexer and fails if anything but comments
-// follows a `;`.
-func scanWords(sql string) ([]string, error) {
+// follows a `;`. Unless standardStrings is set, a backslash escapes in '...' strings too.
+func scanWords(sql string, standardStrings bool) ([]string, error) {
 	var (
 		words []string
 		ended bool
@@ -100,7 +111,7 @@ func scanWords(sql string) ([]string, error) {
 			}
 			i = j
 		case c == '\'' || c == '"':
-			j, err := skipQuoted(r, i, false)
+			j, err := skipQuoted(r, i, c == '\'' && !standardStrings)
 			if err != nil {
 				return nil, err
 			}

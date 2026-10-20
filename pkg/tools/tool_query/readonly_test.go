@@ -54,6 +54,7 @@ func TestQuery_Handler_ReadOnly_Allows(t *testing.T) {
 		"SELECT a$b, $c, $d$ FROM t",
 		"SELECT * FROM t WHERE a = $1",
 		`SELECT regexp_like(s, '\d+') FROM t`,
+		`SELECT 'C:\\' AS p`,
 	}
 
 	for _, q := range queries {
@@ -125,6 +126,8 @@ func TestQuery_Handler_ReadOnly_Rejects(t *testing.T) {
 		"SELECT 1; /* trailing */",
 		`SELECT 1 AS e, 'a\' ; DROP TABLE t; --'`,
 		"SELECT 1;\r\n",
+		`SELECT 'x\' WITH standard_conforming_strings = false -- ' INTO t`,
+		`SELECT 'C:\' AS p`,
 		"SELECT 1 AS x INTO t_new",
 		"SELECT 1 INTO TABLE t_new",
 		"WITH x AS (SELECT 1 AS a) SELECT a INTO t_new FROM x",
