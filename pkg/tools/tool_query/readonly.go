@@ -36,18 +36,33 @@ func validateReadOnly(ctx context.Context, sql string) error {
 
 	// The driver splits statements on the client with its own MySQL-style tokenizer and sends each
 	// piece as a separate request, so it must see exactly one statement too.
-	stmt, err := statement.MakeStmt(nil, sql, fbcontext.GetPreparedStatementsStyle(ctx))
+	queries, err := prepareStatements(ctx, sql)
 	if err != nil {
 		return fmt.Errorf("bad request: read-only mode: %w", err)
 	}
-	if len(stmt.Queries) != 1 {
+	if len(queries) != 1 {
 		return errMultipleStatements
 	}
-	if _, ok := stmt.Queries[0].(*statement.SingleStatement); !ok {
+	if _, ok := queries[0].(*statement.SingleStatement); !ok {
 		return errors.New("bad request: read-only mode: only SELECT or WITH statements are allowed")
 	}
 
 	return nil
+}
+
+// prepareStatements splits sql the way the driver does. The driver's tokenizer panics on some
+// inputs, such as `/*!*/`.
+func prepareStatements(ctx context.Context, sql string) (queries []statement.PreparedQuery, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot split statements: %v", r)
+		}
+	}()
+	stmt, err := statement.MakeStmt(nil, sql, fbcontext.GetPreparedStatementsStyle(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return stmt.Queries, nil
 }
 
 func checkWords(sql string, standardStrings bool) error {
@@ -73,12 +88,14 @@ func checkWords(sql string, standardStrings bool) error {
 // scanWords returns the upper-cased bare words of sql, skipping string literals, quoted
 // identifiers and comments. It follows the Firebolt lexer and fails if anything but comments
 // follows a `;`. Unless standardStrings is set, a backslash escapes in '...' strings too.
+// A new token or literal form in the Firebolt lexer needs a matching change here.
 func scanWords(sql string, standardStrings bool) ([]string, error) {
 	var (
-		words []string
-		ended bool
-		r     = []rune(sql)
-		n     = len(r)
+		words   []string
+		ended   bool
+		r       = []rune(sql)
+		n       = len(r)
+		prevEnd = -1
 	)
 
 	for i := 0; i < n; {
@@ -104,6 +121,8 @@ func scanWords(sql string, standardStrings bool) ([]string, error) {
 		case c == ';':
 			ended = true
 			i++
+		case c == '-' && strings.HasPrefix(string(r[i:min(i+len(minInt64Literal), n)]), minInt64Literal):
+			i += len(minInt64Literal)
 		case c == '$' && i+1 < n && isDigit(r[i+1]):
 			// A positional parameter is `$[0-9]+`; what follows the digits starts a new token.
 			i += 2
@@ -129,6 +148,12 @@ func scanWords(sql string, standardStrings bool) ([]string, error) {
 			for j < n && isIdentPart(r[j]) {
 				j++
 			}
+			if len(words) > 0 && prevEnd >= 0 && isLexerWhitespace(r[prevEnd:i]) {
+				if kw, ok := multiWordTails[words[len(words)-1]]; ok && j-i > len(kw) &&
+					strings.EqualFold(string(r[i:i+len(kw)]), kw) {
+					j = i + len(kw)
+				}
+			}
 			if j == i+1 && (c == 'E' || c == 'e') && j < n && r[j] == '\'' {
 				k, err := skipQuoted(r, j, true)
 				if err != nil {
@@ -138,13 +163,31 @@ func scanWords(sql string, standardStrings bool) ([]string, error) {
 				break
 			}
 			words = append(words, strings.ToUpper(string(r[i:j])))
-			i = j
+			i, prevEnd = j, j
 		default:
 			i++
 		}
 	}
 
 	return words, nil
+}
+
+// The Firebolt lexer has the tokens `NOT BETWEEN` and `[WITH | WITHOUT | AT] TIME ZONE`, which end
+// after BETWEEN or ZONE even inside a longer word: `NOT BETWEENx` is `NOT BETWEEN` then `x`.
+var multiWordTails = map[string]string{"NOT": "BETWEEN", "TIME": "ZONE"}
+
+// minInt64Literal is a single token in the Firebolt lexer, so `-9223372036854775808e1` is that
+// token followed by the identifier `e1`.
+const minInt64Literal = "-9223372036854775808"
+
+// isLexerWhitespace reports whether gap is non-empty and holds only the Firebolt lexer's whitespace.
+func isLexerWhitespace(gap []rune) bool {
+	for _, c := range gap {
+		if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
+			return false
+		}
+	}
+	return len(gap) > 0
 }
 
 // skipQuoted returns the index just past the quoted run starting at r[start].
