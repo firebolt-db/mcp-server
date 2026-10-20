@@ -278,9 +278,11 @@ to a single `SELECT` or `WITH` statement and declare it read-only in its MCP too
 (`readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false`).
 Clients that cache results of read-only tools can then replay them instead of re-running the query.
 
-The statement check skips comments, string literals (including dollar-quoted `$$...$$` and `$tag$...$tag$`) and quoted identifiers. It rejects a second statement after `;`,
-any statement that does not start with `SELECT` or `WITH`, and any bare write or DDL keyword (`INSERT`, `UPDATE`, `DELETE`, `MERGE`,
-`TRUNCATE`, `COPY`, `CREATE`, `ALTER`, `DROP`, `UNDROP`, `VACUUM`, `GRANT`, `REVOKE`, `CALL`).
+The statement check follows the Firebolt lexer. It skips comments, string literals (including dollar-quoted `$$...$$`) and quoted identifiers.
+It rejects a second statement after `;`, any statement that does not start with `SELECT` or `WITH`, and any bare write or DDL keyword
+(`INSERT`, `UPDATE`, `DELETE`, `MERGE`, `TRUNCATE`, `COPY`, `CREATE`, `ALTER`, `DROP`, `UNDROP`, `VACUUM`, `GRANT`, `REVOKE`, `CALL`, `INTO`).
+The Firebolt Go SDK splits statements on the client with a MySQL-style tokenizer, so a query is also rejected unless the SDK sees exactly one statement.
+As a result, a comment after the final `;` and a `;` inside a `$$...$$` literal are rejected.
 It is conservative: `SHOW`, `EXPLAIN` and pipe syntax starting with `FROM` are rejected, and so is an unquoted identifier that matches one of these keywords.
 
 The check is defence in depth and is not a security boundary. Enable read-only mode only when the service account's

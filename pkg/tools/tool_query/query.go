@@ -96,7 +96,7 @@ func (t *Query) Handler() mcp.ToolHandlerFor[Input, *Output] {
 			return nil, nil, fmt.Errorf("bad request: account parameter is required")
 		}
 		if t.readOnly {
-			if err := validateReadOnly(input.Query); err != nil {
+			if err := validateReadOnly(ctx, input.Query); err != nil {
 				return nil, nil, err
 			}
 		}
