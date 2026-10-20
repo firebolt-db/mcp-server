@@ -104,6 +104,12 @@ func scanWords(sql string, standardStrings bool) ([]string, error) {
 		case c == ';':
 			ended = true
 			i++
+		case c == '$' && i+1 < n && isDigit(r[i+1]):
+			// A positional parameter is `$[0-9]+`; what follows the digits starts a new token.
+			i += 2
+			for i < n && isDigit(r[i]) {
+				i++
+			}
 		case isDigit(c) || c == '.' && i+1 < n && isDigit(r[i+1]):
 			i = skipNumber(r, i)
 		case c == '$' && i+1 < n && r[i+1] == '$':
