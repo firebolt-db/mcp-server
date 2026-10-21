@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -29,8 +31,25 @@ type LLMDocs struct {
 // NewLLMDocs creates and returns a new instance of the DocsLLM.
 func NewLLMDocs() *LLMDocs {
 	return &LLMDocs{
-		httpClient: &http.Client{}, // In the future we may want to add a caching transport to this client
+		httpClient: &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				// Preserve the default client's redirect limit when adding validation.
+				if len(via) >= 10 {
+					return fmt.Errorf("stopped after 10 redirects")
+				}
+				return validateLLMDocsURL(req.URL)
+			},
+		},
 	}
+}
+
+// Documentation requests and redirects must stay on the public docs origin.
+func validateLLMDocsURL(u *url.URL) error {
+	if u.Scheme != "https" || u.User != nil || u.Opaque != "" ||
+		(!strings.EqualFold(u.Host, "docs.firebolt.io") && !strings.EqualFold(u.Host, "docs.firebolt.io:443")) {
+		return fmt.Errorf("documentation URL must use the https://docs.firebolt.io origin without user information")
+	}
+	return nil
 }
 
 // ResourceTemplate defines the template for LLM documentation resources.
@@ -71,6 +90,13 @@ func (r *LLMDocs) FetchLLMDocsResources(ctx context.Context, articleURL *string)
 }
 
 func (r *LLMDocs) fetchArticle(ctx context.Context, articleURL string) (*mcp.ReadResourceResult, error) {
+	parsedURL, err := url.Parse(articleURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse documentation URL: %w", err)
+	}
+	if err := validateLLMDocsURL(parsedURL); err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, articleURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create http request: %w", err)
