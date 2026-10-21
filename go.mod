@@ -31,7 +31,7 @@ require (
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/kennygrant/sanitize v1.2.4 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/matishsiao/goInfo v0.0.0-20241216093258-66a9250504d6 // indirect
 	github.com/nlnwa/whatwg-url v0.6.2 // indirect
 	github.com/parquet-go/bitpack v1.0.0 // indirect
