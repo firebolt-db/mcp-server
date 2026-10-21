@@ -1,18 +1,23 @@
 package tool_query
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"unicode"
+
+	fbcontext "github.com/firebolt-db/firebolt-go-sdk/context"
+	"github.com/firebolt-db/firebolt-go-sdk/statement"
 )
 
 // writeKeywords are rejected anywhere in a read-only query, outside of literals and comments.
-// This catches data-modifying CTEs such as `WITH x AS (...) INSERT INTO ...`.
+// This catches writes inside a SELECT or WITH, such as `WITH x AS (...) INSERT INTO ...` and
+// `SELECT ... INTO t`, which creates a table.
 var writeKeywords = map[string]struct{}{
 	"INSERT": {}, "UPDATE": {}, "DELETE": {}, "MERGE": {}, "TRUNCATE": {}, "COPY": {},
 	"CREATE": {}, "ALTER": {}, "DROP": {}, "UNDROP": {}, "VACUUM": {},
-	"GRANT": {}, "REVOKE": {}, "CALL": {},
+	"GRANT": {}, "REVOKE": {}, "CALL": {}, "INTO": {},
 }
 
 var errMultipleStatements = errors.New("bad request: read-only mode: only a single statement is allowed")
@@ -20,8 +25,48 @@ var errMultipleStatements = errors.New("bad request: read-only mode: only a sing
 // validateReadOnly accepts a single SELECT or WITH statement and rejects anything else.
 // It is defence in depth on top of the Firebolt role's grants, not a substitute for them:
 // a keyword scan can be bypassed, the role cannot.
-func validateReadOnly(sql string) error {
-	words, err := scanWords(sql)
+func validateReadOnly(ctx context.Context, sql string) error {
+	// A trailing `WITH standard_conforming_strings = false` makes the engine re-parse the statement
+	// with backslash escapes in regular strings, so the check must hold in both string modes.
+	for _, standardStrings := range []bool{true, false} {
+		if err := checkWords(sql, standardStrings); err != nil {
+			return err
+		}
+	}
+
+	// The driver splits statements on the client with its own MySQL-style tokenizer and sends each
+	// piece as a separate request, so it must see exactly one statement too.
+	queries, err := prepareStatements(ctx, sql)
+	if err != nil {
+		return fmt.Errorf("bad request: read-only mode: %w", err)
+	}
+	if len(queries) != 1 {
+		return errMultipleStatements
+	}
+	if _, ok := queries[0].(*statement.SingleStatement); !ok {
+		return errors.New("bad request: read-only mode: only SELECT or WITH statements are allowed")
+	}
+
+	return nil
+}
+
+// prepareStatements splits sql the way the driver does. The driver's tokenizer panics on some
+// inputs, such as `/*!*/`.
+func prepareStatements(ctx context.Context, sql string) (queries []statement.PreparedQuery, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("cannot split statements: %v", r)
+		}
+	}()
+	stmt, err := statement.MakeStmt(nil, sql, fbcontext.GetPreparedStatementsStyle(ctx))
+	if err != nil {
+		return nil, err
+	}
+	return stmt.Queries, nil
+}
+
+func checkWords(sql string, standardStrings bool) error {
+	words, err := scanWords(sql, standardStrings)
 	if err != nil {
 		return err
 	}
@@ -37,18 +82,20 @@ func validateReadOnly(sql string) error {
 			return fmt.Errorf("bad request: read-only mode: %s is not allowed", w)
 		}
 	}
-
 	return nil
 }
 
 // scanWords returns the upper-cased bare words of sql, skipping string literals, quoted
-// identifiers and comments. It fails if anything but comments follows a `;`.
-func scanWords(sql string) ([]string, error) {
+// identifiers and comments. It follows the Firebolt lexer and fails if anything but comments
+// follows a `;`. Unless standardStrings is set, a backslash escapes in '...' strings too.
+// A new token or literal form in the Firebolt lexer needs a matching change here.
+func scanWords(sql string, standardStrings bool) ([]string, error) {
 	var (
-		words []string
-		ended bool
-		r     = []rune(sql)
-		n     = len(r)
+		words   []string
+		ended   bool
+		r       = []rune(sql)
+		n       = len(r)
+		prevEnd = -1
 	)
 
 	for i := 0; i < n; {
@@ -74,32 +121,73 @@ func scanWords(sql string) ([]string, error) {
 		case c == ';':
 			ended = true
 			i++
-		case c == '$' && (i == 0 || !isIdentPart(r[i-1])):
+		case c == '-' && strings.HasPrefix(string(r[i:min(i+len(minInt64Literal), n)]), minInt64Literal):
+			i += len(minInt64Literal)
+		case c == '$' && i+1 < n && isDigit(r[i+1]):
+			// A positional parameter is `$[0-9]+`; what follows the digits starts a new token.
+			i += 2
+			for i < n && isDigit(r[i]) {
+				i++
+			}
+		case isDigit(c) || c == '.' && i+1 < n && isDigit(r[i+1]):
+			i = skipNumber(r, i)
+		case c == '$' && i+1 < n && r[i+1] == '$':
 			j, err := skipDollarQuoted(r, i)
 			if err != nil {
 				return nil, err
 			}
 			i = j
 		case c == '\'' || c == '"':
-			backslashEscapes := c == '\'' && isEscapeStringPrefix(r, i)
-			j, err := skipQuoted(r, i, backslashEscapes)
+			j, err := skipQuoted(r, i, c == '\'' && !standardStrings)
 			if err != nil {
 				return nil, err
 			}
 			i = j
-		case isIdentStart(c):
-			j := i
+		case isIdentStart(c) || c == '$' && i+1 < n && isIdentStart(r[i+1]):
+			j := i + 1
 			for j < n && isIdentPart(r[j]) {
 				j++
 			}
+			if len(words) > 0 && prevEnd >= 0 && isLexerWhitespace(r[prevEnd:i]) {
+				if kw, ok := multiWordTails[words[len(words)-1]]; ok && j-i > len(kw) &&
+					strings.EqualFold(string(r[i:i+len(kw)]), kw) {
+					j = i + len(kw)
+				}
+			}
+			if j == i+1 && (c == 'E' || c == 'e') && j < n && r[j] == '\'' {
+				k, err := skipQuoted(r, j, true)
+				if err != nil {
+					return nil, err
+				}
+				i = k
+				break
+			}
 			words = append(words, strings.ToUpper(string(r[i:j])))
-			i = j
+			i, prevEnd = j, j
 		default:
 			i++
 		}
 	}
 
 	return words, nil
+}
+
+// The Firebolt lexer has the tokens `NOT BETWEEN` and `[WITH | WITHOUT | AT] TIME ZONE`, which end
+// after BETWEEN or ZONE even inside a longer word: `NOT BETWEENx` is `NOT BETWEEN` then `x`.
+var multiWordTails = map[string]string{"NOT": "BETWEEN", "TIME": "ZONE"}
+
+// minInt64Literal is a single token in the Firebolt lexer, so `-9223372036854775808e1` is that
+// token followed by the identifier `e1`.
+const minInt64Literal = "-9223372036854775808"
+
+// isLexerWhitespace reports whether gap is non-empty and holds only the Firebolt lexer's whitespace.
+func isLexerWhitespace(gap []rune) bool {
+	for _, c := range gap {
+		if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
+			return false
+		}
+	}
+	return len(gap) > 0
 }
 
 // skipQuoted returns the index just past the quoted run starting at r[start].
@@ -120,39 +208,75 @@ func skipQuoted(r []rune, start int, backslashEscapes bool) (int, error) {
 	return 0, errors.New("bad request: read-only mode: unterminated quoted string")
 }
 
-// skipDollarQuoted returns the index just past a $$...$$ or $tag$...$tag$ literal starting
-// at r[start], or start+1 when the `$` does not open one (for example a $1 parameter).
+// skipDollarQuoted returns the index just past the $$...$$ literal starting at r[start].
+// Firebolt has no tagged $tag$ literals: `$tag$` is an identifier.
 func skipDollarQuoted(r []rune, start int) (int, error) {
-	j := start + 1
-	if j < len(r) && isIdentStart(r[j]) {
-		for j < len(r) && (isIdentStart(r[j]) || unicode.IsDigit(r[j])) {
-			j++
-		}
-	}
-	if j >= len(r) || r[j] != '$' {
-		return start + 1, nil
-	}
-	tag := r[start : j+1]
-	for k := j + 1; k+len(tag) <= len(r); k++ {
-		if string(r[k:k+len(tag)]) == string(tag) {
-			return k + len(tag), nil
+	for i := start + 2; i+1 < len(r); i++ {
+		if r[i] == '$' && r[i+1] == '$' {
+			return i + 2, nil
 		}
 	}
 	return 0, errors.New("bad request: read-only mode: unterminated dollar-quoted string")
 }
 
-// isEscapeStringPrefix reports whether the quote at r[i] opens an E'...' escape string.
-func isEscapeStringPrefix(r []rune, i int) bool {
-	if i == 0 || (r[i-1] != 'E' && r[i-1] != 'e') {
-		return false
+// skipNumber returns the index just past the numeric literal starting at r[start]. Like the
+// Firebolt lexer it takes `1_000`, `1.5e10` and `.5` whole, so a following `$$` opens a literal.
+func skipNumber(r []rune, start int) int {
+	i := start
+	if r[i] != '.' {
+		i = skipDigits(r, i)
+		if i >= len(r) || r[i] != '.' {
+			return skipExponent(r, i)
+		}
 	}
-	return i == 1 || !isIdentPart(r[i-2])
+	i++
+	if i < len(r) && isDigit(r[i]) {
+		i = skipDigits(r, i)
+	}
+	return skipExponent(r, i)
 }
 
+// skipDigits skips `[0-9](_?[0-9])*` starting at r[start], which must be a digit.
+func skipDigits(r []rune, start int) int {
+	i := start + 1
+	for i < len(r) {
+		switch {
+		case isDigit(r[i]):
+			i++
+		case r[i] == '_' && i+1 < len(r) && isDigit(r[i+1]):
+			i += 2
+		default:
+			return i
+		}
+	}
+	return i
+}
+
+// skipExponent skips `[eE][-+]?[0-9]...` at r[start] if it is there.
+func skipExponent(r []rune, start int) int {
+	i := start
+	if i >= len(r) || (r[i] != 'e' && r[i] != 'E') {
+		return start
+	}
+	i++
+	if i < len(r) && (r[i] == '+' || r[i] == '-') {
+		i++
+	}
+	if i >= len(r) || !isDigit(r[i]) {
+		return start
+	}
+	return skipDigits(r, i)
+}
+
+func isDigit(c rune) bool {
+	return c >= '0' && c <= '9'
+}
+
+// isIdentStart and isIdentPart follow Firebolt's unquoted identifiers, `[A-Za-z_][A-Za-z0-9_$]*`.
 func isIdentStart(c rune) bool {
-	return unicode.IsLetter(c) || c == '_'
+	return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c == '_'
 }
 
 func isIdentPart(c rune) bool {
-	return unicode.IsLetter(c) || unicode.IsDigit(c) || c == '_' || c == '$'
+	return isIdentStart(c) || isDigit(c) || c == '$'
 }

@@ -29,8 +29,7 @@ func TestQuery_Tool_Annotations(t *testing.T) {
 		assert.True(t, tool.Annotations.IdempotentHint)
 		require.NotNil(t, tool.Annotations.DestructiveHint)
 		assert.False(t, *tool.Annotations.DestructiveHint)
-		require.NotNil(t, tool.Annotations.OpenWorldHint)
-		assert.False(t, *tool.Annotations.OpenWorldHint)
+		assert.Nil(t, tool.Annotations.OpenWorldHint, "SELECT can read external data such as S3 files")
 		assert.Contains(t, tool.Description, "Read-only")
 	})
 }
@@ -41,8 +40,7 @@ func TestQuery_Handler_ReadOnly_Allows(t *testing.T) {
 		"select * from t",
 		"  \n\tSELECT 1",
 		"SELECT 1;",
-		"SELECT 1; -- trailing comment",
-		"SELECT 1; /* trailing */",
+		"SELECT 1;  \n",
 		"-- leading comment\nSELECT 1",
 		"/* leading */ SELECT 1",
 		"WITH x AS (SELECT 1 AS a) SELECT a FROM x",
@@ -52,9 +50,16 @@ func TestQuery_Handler_ReadOnly_Allows(t *testing.T) {
 		`SELECT "update", "delete" FROM t`,
 		"SELECT 1 -- DROP TABLE t",
 		"SELECT updated_at, created_by FROM t",
-		"SELECT $$drop table t; -- not a comment$$ AS s",
-		"SELECT $q$it's $$ nested; delete$q$ AS s",
-		"SELECT a$b FROM t",
+		"SELECT $$drop table t -- not a comment$$ AS s",
+		"SELECT a$b, $c, $d$ FROM t",
+		"SELECT * FROM t WHERE a = $1",
+		"SELECT 1_000, 1.5e10, .5, 2e-3, t.a FROM t",
+		"SELECT 'b' NOT BETWEEN 'a' AND 'z'",
+		"SELECT '2020-01-01'::TIMESTAMP WITH TIME ZONE AT TIME ZONE 'UTC' AS ts",
+		"SELECT -9223372036854775808 AS m",
+		"SELECT 1 /*! hint */",
+		`SELECT regexp_like(s, '\d+') FROM t`,
+		`SELECT 'C:\\' AS p`,
 	}
 
 	for _, q := range queries {
@@ -113,7 +118,40 @@ func TestQuery_Handler_ReadOnly_Rejects(t *testing.T) {
 		"SELECT $$ /* $$; DROP TABLE t /* */",
 		"SELECT $$ ' $$; DELETE FROM t --'",
 		"WITH x AS (SELECT $$--$$) INSERT INTO t SELECT * FROM x",
-		"SELECT $tag$ -- $tag$; DROP TABLE t",
+		"SELECT 1 AS $tag$; DROP TABLE t; $tag$",
+		"SELECT $q$it's $$ nested; delete$q$ AS s",
+		"SELECT 1$$ -- $$; DROP TABLE t",
+		"SELECT 1_000$$ -- $$; DROP TABLE t",
+		"SELECT 1e5$$ -- $$; DROP TABLE t",
+		"SELECT 1.5e5$$ -- $$; DROP TABLE t",
+		"SELECT .5e3$$ -- $$; DROP TABLE t",
+		"SELECT $1_000$$ INTO t -- $$",
+		"SELECT $1e2$$ INTO t$$",
+		"SELECT $1.e2$$ INTO t$$",
+		"SELECT 1 AS $tag$ INTO t $tag$",
+		"SELECT '2020-01-01'::TIMESTAMP WITH TIME ZONEINTO t",
+		"SELECT 'a' NOT BETWEEN$$ -- $$ AND 'z' INTO t",
+		"SELECT 'a' NOT\n BETWEEN$$ -- $$ AND 'z' INTO t",
+		`SELECT 'a' NOT BETWEENe'\'' AND 'x\' INTO t --'`,
+		"SELECT -9223372036854775808e1$$ INTO t$$",
+		"SELECT -9223372036854775808_1$$ INTO t$$",
+		"SELECT 1 /*!*/",
+		"SELECT 1 /*!12345*/",
+		`SELECT 'x\' AS a -- ' ; DROP TABLE t`,
+		`SELECT 1 FROM t WHERE c = 'C:\' -- ' ; DROP TABLE t`,
+		`SELECT 1 AS "x\" -- " ; DROP TABLE t`,
+		`SELECT 'x\' -- ' ; SET foo = 1`,
+		"SELECT $$ ' $$ -- ' ; DROP TABLE t",
+		"SELECT $$drop table t; -- not a comment$$ AS s",
+		"SELECT 1; -- trailing comment",
+		"SELECT 1; /* trailing */",
+		`SELECT 1 AS e, 'a\' ; DROP TABLE t; --'`,
+		"SELECT 1;\r\n",
+		`SELECT 'x\' WITH standard_conforming_strings = false -- ' INTO t`,
+		`SELECT 'C:\' AS p`,
+		"SELECT 1 AS x INTO t_new",
+		"SELECT 1 INTO TABLE t_new",
+		"WITH x AS (SELECT 1 AS a) SELECT a INTO t_new FROM x",
 		"SELECT $$unterminated",
 		"SELECT 'unterminated",
 		"SELECT /* unterminated",
