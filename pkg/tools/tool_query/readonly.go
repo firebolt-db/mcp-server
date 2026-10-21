@@ -74,7 +74,7 @@ func scanWords(sql string) ([]string, error) {
 		case c == ';':
 			ended = true
 			i++
-		case c == '$' && (i == 0 || !isIdentPart(r[i-1])):
+		case c == '$':
 			j, err := skipDollarQuoted(r, i)
 			if err != nil {
 				return nil, err
@@ -153,6 +153,8 @@ func isIdentStart(c rune) bool {
 	return unicode.IsLetter(c) || c == '_'
 }
 
+// isIdentPart excludes `$`: Firebolt identifiers cannot contain it, so `LIKE$$...$$` is a
+// keyword followed by a literal.
 func isIdentPart(c rune) bool {
-	return unicode.IsLetter(c) || unicode.IsDigit(c) || c == '_' || c == '$'
+	return unicode.IsLetter(c) || unicode.IsDigit(c) || c == '_'
 }

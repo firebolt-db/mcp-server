@@ -55,6 +55,8 @@ func TestQuery_Handler_ReadOnly_Allows(t *testing.T) {
 		"SELECT $$drop table t; -- not a comment$$ AS s",
 		"SELECT $q$it's $$ nested; delete$q$ AS s",
 		"SELECT a$b FROM t",
+		"SELECT * FROM t WHERE s LIKE$$a%$$",
+		"SELECT * FROM t WHERE a = $1",
 	}
 
 	for _, q := range queries {
@@ -114,6 +116,10 @@ func TestQuery_Handler_ReadOnly_Rejects(t *testing.T) {
 		"SELECT $$ ' $$; DELETE FROM t --'",
 		"WITH x AS (SELECT $$--$$) INSERT INTO t SELECT * FROM x",
 		"SELECT $tag$ -- $tag$; DROP TABLE t",
+		"SELECT 'a' LIKE$$ -- $$; DROP TABLE t",
+		"SELECT 1 WHERE x BETWEEN$$a$$AND$$ -- $$; DELETE FROM t",
+		"SELECT x$$ /* $$; DROP TABLE t /* */",
+		"SELECT 1 WHERE s LIKE$tag$ -- $tag$; DROP TABLE t",
 		"SELECT $$unterminated",
 		"SELECT 'unterminated",
 		"SELECT /* unterminated",
