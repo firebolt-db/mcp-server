@@ -17,6 +17,7 @@ type Config struct {
 	CoreURL     string
 
 	SkipDocsProof bool
+	ReadOnly      bool
 }
 
 func (c Config) Validate() error {

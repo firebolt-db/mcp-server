@@ -10,6 +10,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+
+	"github.com/firebolt-db/mcp-server/pkg/tools"
 )
 
 const (
@@ -46,6 +48,7 @@ func (t *Search) Tool() *mcp.Tool {
 		Title: "Firebolt Documentation Search",
 		Description: "Returns search results from Firebolt knowledge base using RAG. " +
 			"Use this tool to find answers to your questions about how to use Firebolt. ",
+		Annotations: tools.ReadOnlyAnnotations(),
 	}
 }
 

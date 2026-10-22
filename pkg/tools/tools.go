@@ -17,3 +17,13 @@ func TextOrResourceContent(disableResources bool, i *mcp.ResourceContents) mcp.C
 		Resource: i,
 	}
 }
+
+// ReadOnlyAnnotations marks a tool that does not modify its environment.
+func ReadOnlyAnnotations() *mcp.ToolAnnotations {
+	return &mcp.ToolAnnotations{ReadOnlyHint: true}
+}
+
+// Ptr returns a pointer to v, for optional annotation fields.
+func Ptr[T any](v T) *T {
+	return &v
+}
