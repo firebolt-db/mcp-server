@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v3 v3.14.0
 	golang.org/x/oauth2 v0.37.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.24.0
 )
 
 require (
