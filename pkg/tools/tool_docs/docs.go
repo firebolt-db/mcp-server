@@ -44,6 +44,7 @@ func (t *Docs) Tool() *mcp.Tool {
 			"Use this tool when need to get general information about Firebolt or need to connect to and use Firebolt. " +
 			"Firebolt differs significantly from other databases, so it's important to gather some initial information before providing accurate answers. " +
 			"To search for detailed information about using Firebolt, query syntax, object types etc use `firebolt_docs_search` tool",
+		Annotations: tools.ReadOnlyAnnotations(),
 	}
 }
 

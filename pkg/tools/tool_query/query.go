@@ -8,6 +8,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/firebolt-db/mcp-server/pkg/clients/database"
+	"github.com/firebolt-db/mcp-server/pkg/tools"
 )
 
 type Input struct {
@@ -25,16 +26,32 @@ type Output struct {
 // It handles connecting to the appropriate account, database, and engine before
 // executing the query and returning results.
 type Query struct {
-	dbPool database.Pool
+	dbPool   database.Pool
+	readOnly bool
+}
+
+// Option configures the Query tool.
+type Option func(*Query)
+
+// WithReadOnly restricts the tool to a single SELECT or WITH statement and
+// declares it read-only in its MCP annotations, so clients may cache its results.
+func WithReadOnly() Option {
+	return func(q *Query) {
+		q.readOnly = true
+	}
 }
 
 // NewQuery creates a new instance of the Query tool with the provided database connection pool.
 // The connection pool is responsible for managing connections to different Firebolt
 // account/database/engine combinations.
-func NewQuery(dbPool database.Pool) *Query {
-	return &Query{
+func NewQuery(dbPool database.Pool, opts ...Option) *Query {
+	q := &Query{
 		dbPool: dbPool,
 	}
+	for _, opt := range opts {
+		opt(q)
+	}
+	return q
 }
 
 // Tool returns the mcp.Tool definition for the Query tool.
@@ -42,11 +59,21 @@ func NewQuery(dbPool database.Pool) *Query {
 // - The tool's name and description
 // - Required and optional parameters with their descriptions
 func (t *Query) Tool() *mcp.Tool {
-	return &mcp.Tool{
+	tool := &mcp.Tool{
 		Name:        "firebolt_query",
 		Title:       "Firebolt Query",
 		Description: "Execute an SQL query against Firebolt.",
 	}
+	if t.readOnly {
+		tool.Description += " Read-only: only a single SELECT or WITH statement is accepted."
+		tool.Annotations = &mcp.ToolAnnotations{
+			ReadOnlyHint:    true,
+			DestructiveHint: tools.Ptr(false),
+			IdempotentHint:  true,
+			OpenWorldHint:   tools.Ptr(false),
+		}
+	}
+	return tool
 }
 
 // Register adds the Query tool to the provided MCP server instance.
@@ -67,6 +94,11 @@ func (t *Query) Handler() mcp.ToolHandlerFor[Input, *Output] {
 		}
 		if input.Account == "" {
 			return nil, nil, fmt.Errorf("bad request: account parameter is required")
+		}
+		if t.readOnly {
+			if err := validateReadOnly(input.Query); err != nil {
+				return nil, nil, err
+			}
 		}
 
 		var (

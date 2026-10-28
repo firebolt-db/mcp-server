@@ -17,8 +17,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/firebolt-db/mcp-server/pkg/clients/database/databasemock"
 	"github.com/firebolt-db/mcp-server/pkg/prompts"
 	"github.com/firebolt-db/mcp-server/pkg/server"
+	"github.com/firebolt-db/mcp-server/pkg/tools/tool_query"
 )
 
 // TestNewServer checks that NewServer registers tools, prompts, and resource templates correctly.
@@ -437,6 +439,26 @@ func (f *funcTool) Register(s *mcp.Server) {
 		}
 		return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: "done"}}}, nil, nil
 	})
+}
+
+// TestServeStreamableHTTP_ToolAnnotations checks that tool annotations survive
+// registration and serialization, so clients see them in tools/list.
+func TestServeStreamableHTTP_ToolAnnotations(t *testing.T) {
+	addr := freeAddr(t)
+	tools := []server.Tool{tool_query.NewQuery(databasemock.NewPoolMock(), tool_query.WithReadOnly())}
+	srv := server.NewServer(slogt.New(t), "0.0.0", "streamable-http", addr, tools, nil, nil)
+	cancel, serveErr := serve(t, srv)
+
+	session := connect(t, addr, false)
+	res, err := session.ListTools(t.Context(), nil)
+	require.NoError(t, err)
+	require.Len(t, res.Tools, 1)
+	require.NotNil(t, res.Tools[0].Annotations)
+	assert.True(t, res.Tools[0].Annotations.ReadOnlyHint)
+	require.NoError(t, session.Close())
+
+	cancel()
+	require.NoError(t, <-serveErr, "Serve should shut down cleanly")
 }
 
 // mockTool is a mock implementation of the Tool interface for testing.

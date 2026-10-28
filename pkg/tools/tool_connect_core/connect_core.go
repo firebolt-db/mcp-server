@@ -75,6 +75,7 @@ func (t *ConnectCore) Tool() *mcp.Tool {
 		Title: "Firebolt Core Connect",
 		Description: "Returns a list of databases you have access to in Firebolt Core. " +
 			"This information is required before using the `firebolt_query` tool.",
+		Annotations: tools.ReadOnlyAnnotations(),
 	}
 }
 

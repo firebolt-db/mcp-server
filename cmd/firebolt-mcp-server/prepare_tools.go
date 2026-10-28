@@ -28,6 +28,11 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 		docsProof = &docsProofToken
 	}
 
+	var queryOpts []tool_query.Option
+	if cfg.ReadOnly {
+		queryOpts = append(queryOpts, tool_query.WithReadOnly())
+	}
+
 	// resources shared between Firebolt and Firebolt Core
 	resourceDocs := resources.NewDocs(fireboltdocs.FS, docsProofToken)
 
@@ -42,7 +47,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 			tool_connect_core.NewConnectCore(resourceCoreAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
 			tool_docs.NewDocs(resourceDocs, cfg.DisableResources, true),
 			tool_docs_llm.NewDocsLLM(resourceLLMDocs, cfg.DisableResources),
-			tool_query.NewQuery(dbPool),
+			tool_query.NewQuery(dbPool, queryOpts...),
 		}
 		resourceTemplates := []server.ResourceTemplate{
 			resourceDocs,
@@ -86,7 +91,7 @@ func prepareToolsAndResourceTemplates(ctx context.Context, logger *slog.Logger, 
 	tools := []server.Tool{
 		tool_connect.NewConnect(resourceAccounts, resourceDatabases, resourceEngines, docsProof, cfg.DisableResources),
 		tool_docs.NewDocs(resourceDocs, cfg.DisableResources, false),
-		tool_query.NewQuery(dbPool),
+		tool_query.NewQuery(dbPool, queryOpts...),
 		docsSearchTool,
 	}
 
